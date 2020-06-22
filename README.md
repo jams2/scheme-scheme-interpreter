@@ -2,12 +2,12 @@
 
 This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of The Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube.
 
-The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go.
+The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go. I'm using an alist representation of environment frames, but it's somewhat arbitrary.
+
 
 ## Tests
 
 The tests give a good description of the behaviour.
-
 
 - [x] "numbers are self-evaluating"
 - [x] "strings are self-evaluating"
@@ -28,5 +28,7 @@ The tests give a good description of the behaviour.
 - [x] "'begin expressions eval all subexpressions, returning the last result"
 - [x] "'set! expressions mutate an existing variable in current scope"
 - [x] "'set! on an undefined var throws an error"
-- [] "if statement 1" FAILED - expected <true> got <#t>
-- [] "if statement: no alternative" FAILED - expected <false> got <#f>
+- [x] "'if statements evaluate their consequent if the predicate passes"
+- [x] "'if statements return false if the predicate fails and there is no alt"
+- [x] "'if statements do not evaluate their consequent if the predicate fails"
+- [x] #<procedure cond->if at sicp.ss:2128>
