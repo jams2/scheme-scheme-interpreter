@@ -15,13 +15,19 @@
 	  [(string? expr) expr]
 	  [(symbol? expr) (lookup-variable expr env)]
 	  [(expr-match? 'quote expr) (cadr expr)]
-	  [(expr-match? 'define expr) (define-variable! (definition-var expr)
+	  [(expr-match? 'define expr) (define-variable!
+					(definition-var expr)
 					(evaluate (definition-val expr) env)
 					env)]
+	  [(expr-match? 'set! expr) (set-variable!
+				     (definition-var expr)
+				     (evaluate (definition-val expr) env)
+				     env)]
 	  [(expr-match? 'lambda expr) (make-procedure (lambda-args expr)
 						 (lambda-body expr)
 						 env)]
 	  [(expr-match? 'if expr) (eval-if expr env)]
+	  [(expr-match? 'begin expr) (eval-sequence (cdr expr) env)]
 	  [(application? expr)
 	   (my-apply (evaluate (rator expr) env)
 		     (eval-list (rands expr) env)
@@ -108,8 +114,19 @@
 
 (define define-variable!
   (lambda (var val env)
-    (let ([first-frame (car env)])
-      (set-car! env (cons `(,var . ,val) first-frame)))))
+    (let* ([first-frame (car env)]
+	   [existing (assoc var first-frame)])
+      (if existing
+	  (set-cdr! existing val)
+	  (set-car! env (cons `(,var . ,val) first-frame))))))
+
+(define set-variable!
+  (lambda (var val env)
+    (let* ([first-frame (car env)]
+	   [existing (assoc var first-frame)])
+      (if existing
+	  (set-cdr! existing val)
+	  (error 'set-variable! "Unbound variable" var)))))
 
 (define definition-var
   (lambda (expr) (cadr expr)))
@@ -167,7 +184,7 @@
 	      (lambda (c)
 		(let ([c-who (condition-who c)])
 		  (if (eq? c-who who)
-		      (begin (display (format "[] ~s PASSED\n" desc))
+		      (begin (display (format "[] ~s\n" desc))
 			     (k #f))
 		      (begin
 			(display (format "[x] ~s FAILED - expected <~s> got <~s>\n"
@@ -189,7 +206,7 @@
 			   description
 			   expected
 			   actual))
-	  (display (format "[] ~s PASSED\n" description))))))
+	  (display (format "[] ~s\n" description))))))
 
 (define test-env
   (lambda (description expr expected env-proc)
@@ -197,40 +214,65 @@
       (evaluate expr env)
       (let ([env-result (env-proc env)])
 	(if (equal? expected env-result)
-	    (display (format "[] ~s PASSED\n" description))
+	    (display (format "[] ~s\n" description))
 	    (display (format "[x] ~s FAILED - expected <~s> got <~s>\n"
 			     description
 			     expected
 			     env-result)))))))
 
-(with-initial-env "numbers 1" '1 1)
-(with-initial-env "string 1" "hello world" "hello world")
-(with-frame '((x . 5)) "var lookup 1" 'x 5)
-(with-error 'lookup-variable "unbound variable 1" 'y)
-(test-env "define 1" '(define x 5) 5 (lambda (env) (cdaar env)))
-(with-empty-env "make procedure 1"
+(with-initial-env "numbers are self-evaluating" '1 1)
+(with-initial-env "strings are self-evaluating" "hello world" "hello world")
+(with-frame '((x . 5)) "variables return their bound value" 'x 5)
+(with-error 'lookup-variable "evaluating an unbound variable causes an exception" 'y)
+(test-env "'define statements create a binding of var to val in the current scope"
+	  '(define x 5)
+	  5
+	  (lambda (env) (cdaar env)))
+(with-empty-env "evaluating a lambda returns a 'procedure-tagged list"
 		'(lambda (x) (+ x y) (display y))
 		'(procedure (x) ((+ x y) (display y)) ()))
-(test-env "define procedure"
+(test-env "'define with a lambda evaluates the lambda and binds it to the variable"
 	  '(define proc (lambda (x) (+ x y) (display y)))
 	  'procedure
 	  (lambda (env) (cadaar env)))
-(test-env "assign application result"
+(test-env "variable definitions evaluate their values before binding"
 	  '(define x (+ 5 11))
 	  '(x . 16)
 	  (lambda (env) (caar env)))
-(test-env "assign left left lambda result"
+(test-env "variable definitions evaluate their values before binding, left left lambda"
 	  '(define x ((lambda (x y) (+ x y)) 5 11))
 	  '(x . 16)
 	  (lambda (env) (caar env)))
-(with-initial-env "primitive application: multiple operands" '(+ 1 2) 3)
-(with-initial-env "primitive application: single operand" '(- 2) -2)
-(with-initial-env "left left lambda: identity" '((lambda (x) x) 11) 11)
+(test-env "'define updates an existing binding if exists"
+	  '(begin (define x 5) (define x 6))
+	  #t
+	  (lambda (env)
+	    (let ([first-frame (car env)])
+	      (and (equal? (car first-frame) '(x . 6))
+		   (not (equal? (car first-frame) (cadr first-frame)))))))
+(with-initial-env "primitive procedures are evaluated scheme" '(+ 1 2) 3)
+(with-initial-env "unary primitives are evaluated by scheme" '(- 2) -2)
+(with-initial-env "left left lambdas are immediately evaluated and applied"
+		  '((lambda (x) x) 11)
+		  11)
 (with-frame '((x . (procedure (x) (x) ,(setup-env))))
-	    "defined process application 1"
+	    "defined procedures are applied to their operands"
 	    '(x 11)
 	    11)
-(with-empty-env "quoted expression 1" ''x 'x)
-(with-empty-env "quoted expression: list" ''(x y z) '(x y z))
+(with-empty-env "quoted expressions return the expression" ''x 'x)
+(with-empty-env "quoted lists return the list" ''(x y z) '(x y z))
+(with-initial-env "'begin expressions eval all subexpressions, returning the last result"
+		  '(begin (+ 1 2) (+ 3 4) (+ 5 6))
+		  11)
+(test-env "'set! expressions mutate an existing variable in current scope"
+	  '(begin (define x 5) (set! x 11))
+	  #t
+	  (lambda (env)
+	    (let ([first-frame (car env)])
+	      (and (eq? (cdar first-frame) 11)
+		   (not (equal? (car first-frame) (cadr first-frame)))))))
+(with-error 'set-variable!
+	    "'set! on an undefined var throws an error"
+	    '(set! x 5))
 (with-initial-env "if statement 1" '(if (+ 1 2) true false) 'true)
 (with-initial-env "if statement: no alternative" '(if false true) 'false)
