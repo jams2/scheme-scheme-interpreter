@@ -1,6 +1,6 @@
 # Scheme Interpreter
 
-This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of The Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube.
+This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of The Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
 
 The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go. I'm using an alist representation of environment frames, but it's somewhat arbitrary.
 
@@ -30,5 +30,8 @@ The tests give a good description of the behaviour.
 - [x] "'set! on an undefined var throws an error"
 - [x] "'if statements evaluate their consequent if the predicate passes"
 - [x] "'if statements return false if the predicate fails and there is no alt"
+- [x] "'let statements are evaluated"
 - [x] "'if statements do not evaluate their consequent if the predicate fails"
-- [x] #<procedure cond->if at sicp.ss:2128>
+- [x] #<procedure case->let at sicp.ss:2126>
+- [x] #<procedure let->lambda at sicp.ss:2845>
+- [x] #<procedure cond->if at sicp.ss:2550>

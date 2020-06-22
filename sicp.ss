@@ -14,26 +14,28 @@
     (cond [(number? expr) expr]
 	  [(string? expr) expr]
 	  [(symbol? expr) (lookup-variable expr env)]
-	  [(expr-match? 'quote expr) (cadr expr)]
-	  [(expr-match? 'define expr) (define-variable!
-					(definition-var expr)
-					(evaluate (definition-val expr) env)
-					env)]
-	  [(expr-match? 'set! expr) (set-variable!
-				     (definition-var expr)
-				     (evaluate (definition-val expr) env)
-				     env)]
-	  [(expr-match? 'lambda expr) (make-procedure (lambda-args expr)
-						 (lambda-body expr)
-						 env)]
-	  [(expr-match? 'if expr) (eval-if expr env)]
-	  [(expr-match? 'begin expr) (eval-sequence (cdr expr) env)]
-	  [(expr-match? 'cond expr) (evaluate (cond->if (cond-clauses expr))
-					      env)]
-	  [(application? expr)
-	   (my-apply (evaluate (rator expr) env)
+	  [(pair? expr)
+	   (case (car expr)
+	     [(case) (evaluate (case->let expr) env)]
+	     [(quote) (cadr expr)]
+	     [(define) (define-variable!
+			 (definition-var expr)
+			 (evaluate (definition-val expr) env)
+			 env)]
+	     [(set!) (set-variable! (definition-var expr)
+				    (evaluate (definition-val expr) env)
+				    env)]
+	     [(lambda) (make-procedure (lambda-args expr)
+				  (lambda-body expr)
+				  env)]
+	     [(if) (eval-if expr env)]
+	     [(begin) (eval-sequence (cdr expr) env)]
+	     [(cond) (evaluate (cond->if (cond-clauses expr))
+			       env)]
+	     [(let) (evaluate (let->lambda expr) env)]
+	     [else (my-apply (evaluate (rator expr) env)
 		     (eval-list (rands expr) env)
-		     env)]
+		     env)])]
 	  [else (error 'evaluate "Invalid expression" expr)])))
 
 (define my-apply
@@ -79,13 +81,40 @@
 (define clause-consequent
   (lambda (cond-clause) (cdr cond-clause)))
 
+(define case->let
+  (lambda (expr)
+    `(let ([k ,(cadr expr)])
+       ,(case-clauses->if (cddr expr)))))
+
+(define case-clauses->if
+  (lambda (clauses)
+    (cond ((null? clauses) clauses)
+	  ((eq? (caar clauses) 'else) (seq->expr (clause-consequent (car clauses))))
+	  (else `(if (eqv? k ,@(clause-predicate (car clauses)))
+		     ,(seq->expr (clause-consequent (car clauses)))
+		     ,(case-clauses->if (cdr clauses)))))))
+
 (define cond->if
   (lambda (clauses)
-    (cond ((null? clauses) 'false)
-	  ((eq? (caar clauses) 'else) `(begin ,@(clause-consequent (car clauses))))
+    (cond ((null? clauses) clauses)
+	  ((eq? (caar clauses) 'else) (seq->expr (clause-consequent (car clauses))))
 	  (else `(if ,(clause-predicate (car clauses))
-		     (begin ,@(clause-consequent (car clauses)))
+		     ,(seq->expr (clause-consequent (car clauses)))
 		     ,(cond->if (cdr clauses)))))))
+
+(define let->lambda
+  (lambda (expr)
+    (let ([bindings (cadr expr)]
+	  [body (cddr expr)])
+      `((lambda ,(map car bindings)
+	  ,@body)
+	,@(map cadr bindings)))))
+
+(define seq->expr
+  (lambda (sequence)
+    (cond ((null? sequence) sequence)
+	  ((null? (cdr sequence)) (car sequence))
+	  (else `(begin ,@sequence)))))
 
 (define if-predicate
   (lambda (expr) (cadr expr)))
@@ -333,19 +362,34 @@
 		     '(if false true)
 		     #f)
 
+   (with-initial-env "'let statements are evaluated"
+		     '(let ((x 5) (y 6)) (+ x x) (+ x y))
+		     11)
+
    (with-frame '((x . 5))
 	       "'if statements do not evaluate their consequent if the predicate fails"
 	       '(if false (set! x 6) x)
 	       5)
 
-   (test-transformer
-    cond->if
-    '(((null? x) '())
-      ((eq? x 'y) x)
-      (else y))
-    '(if (null? x)
-	 (begin '())
-	 (if (eq? x 'y)
-	     (begin x)
-	     (begin y))))
+   (test-transformer case->let
+		     '(case (x)
+			((y) (+ 1 2))
+			((x) (+ 3 2) (- 1 4))
+			(else x))
+		     '(let ([k (x)])
+			(if (eqv? k y)
+			    (+ 1 2)
+			    (if (eqv? k x) (begin (+ 3 2) (- 1 4)) x))))
+
+   (test-transformer let->lambda
+		     '(let ((x 5) (y 6)) (+ x y) (* x x))
+		     '((lambda (x y) (+ x y) (* x x)) 5 6))
+
+   (test-transformer cond->if
+		     '(((null? x) '())
+		       ((eq? x 'y) x)
+		       (else y))
+		     '(if (null? x)
+			  '()
+			  (if (eq? x 'y) x y)))
    ))
