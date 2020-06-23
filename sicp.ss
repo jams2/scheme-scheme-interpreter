@@ -49,10 +49,6 @@
 				   (proc-env rator)))
 	(scheme-apply rator rands))))
 
-(define expr-match?
-  (lambda (sym expr)
-    (eq? sym (car expr))))
-
 (define eval-list
   (lambda (l env)
     (if (null? l)
@@ -115,13 +111,34 @@
 (define transform-let
   (lambda (expr)
     (if (named-let? expr)
-	'()
+	(transform-named-let expr)
 	(let ([bindings (cadr expr)]
 	      [body (cddr expr)])
 	  (let->lambda bindings body)))))
 
 (define named-let?
   (lambda (expr) (symbol? (cadr expr))))
+
+(define transform-named-let
+  (lambda (expr)
+    (named-let->letrec (named-let-name expr)
+		       (named-let-bindings expr)
+		       (named-let-body expr))))
+
+(define named-let->letrec
+  (lambda (name bindings body)
+    `((letrec ([,name (lambda ,(map car bindings) ,@body)])
+	,name)
+      ,@(map cadr bindings))))
+
+(define named-let-name
+  (lambda (expr) (cadr expr)))
+
+(define named-let-bindings
+  (lambda (expr) (caddr expr)))
+
+(define named-let-body
+  (lambda (expr) (cdddr expr)))
 
 (define let->lambda
   (lambda (bindings body)
@@ -259,7 +276,7 @@
     (scan-env env)))
 
 (define-syntax run-tests
-  (syntax-rules (define)
+  (syntax-rules ()
     [(_ t1 ...)
      (let ([passed 0]
 	   [failed 0]
@@ -474,8 +491,8 @@
  (with-initial-env "named let statements are evaluated"
  		   '(let fact ((n 5) (total 1))
  		      (if (= 0 n)
- 			  1
- 			  (* n (fact (- n 1)))))
+ 			  total
+ 			  (fact (- n 1) (* total n))))
  		   120)
  (with-initial-env "letrec handles mutually recursive procedures in its bindings"
  		   '(letrec ([even? (lambda (n)
@@ -509,4 +526,16 @@
 				       true
 				       (even? (- n 1)))))
 		      (even? 5)))
+ (test-transformer transform-named-let
+		   '(let fact ((n 5) (total 1))
+ 		      (if (= 0 n)
+ 			  1
+ 			  (* n (fact (- n 1)))))
+		   '((letrec ([fact (lambda (n total)
+				      (if (= 0 n)
+					  1
+					  (* n (fact (- n 1)))))])
+		       fact)
+		     5
+		     1))
  )

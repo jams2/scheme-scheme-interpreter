@@ -37,6 +37,11 @@ The tests give a good description of the behaviour.
 - [x] cond statements are transformed
 - [x] let* statements are transformed
 - [x] "'let* statements are evaluated"
-- [!] "named let statements are evaluated":
-Exception in evaluate: Invalid expression with irritant ()
-Type (debug) to enter the debugger.
+- [x] "named let statements are evaluated"
+- [x] "letrec handles mutually recursive procedures in its bindings"
+- [x] letrec statements are transformed
+- [x] let statements are transformed
+
+Ran 32 tests in 0.0s:
+	 32 PASSED
+	  0 FAILED
