@@ -32,6 +32,8 @@ The tests give a good description of the behaviour.
 - [x] "'if statements return false if the predicate fails and there is no alt"
 - [x] "'let statements are evaluated"
 - [x] "'if statements do not evaluate their consequent if the predicate fails"
-- [x] #<procedure case->let at sicp.ss:2126>
-- [x] #<procedure let->lambda at sicp.ss:2845>
-- [x] #<procedure cond->if at sicp.ss:2550>
+- [x] case statements are transformed
+- [x] let statements are transformed
+- [x] cond statements are transformed
+- [x] let* statements are transformed
+- [x] "'let* statements are evaluated"

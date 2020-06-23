@@ -16,7 +16,7 @@
 	  [(symbol? expr) (lookup-variable expr env)]
 	  [(pair? expr)
 	   (case (car expr)
-	     [(case) (evaluate (case->let expr) env)]
+	     [(case) (evaluate (transform-case expr) env)]
 	     [(quote) (cadr expr)]
 	     [(define) (define-variable!
 			 (definition-var expr)
@@ -30,9 +30,9 @@
 				  env)]
 	     [(if) (eval-if expr env)]
 	     [(begin) (eval-sequence (cdr expr) env)]
-	     [(cond) (evaluate (cond->if (cond-clauses expr))
-			       env)]
-	     [(let) (evaluate (let->lambda expr) env)]
+	     [(cond) (evaluate (transform-cond expr) env)]
+	     [(let) (evaluate (transform-let expr) env)]
+	     [(let*) (evaluate (transform-let* expr) env)]
 	     [else (my-apply (evaluate (rator expr) env)
 		     (eval-list (rands expr) env)
 		     env)])]
@@ -81,10 +81,14 @@
 (define clause-consequent
   (lambda (cond-clause) (cdr cond-clause)))
 
-(define case->let
+(define transform-case
   (lambda (expr)
-    `(let ([k ,(cadr expr)])
-       ,(case-clauses->if (cddr expr)))))
+    (case->let (cadr expr) (cddr expr))))
+
+(define case->let
+  (lambda (key clauses)
+    `(let ([k ,key])
+       ,(case-clauses->if clauses))))
 
 (define case-clauses->if
   (lambda (clauses)
@@ -94,6 +98,10 @@
 		     ,(seq->expr (clause-consequent (car clauses)))
 		     ,(case-clauses->if (cdr clauses)))))))
 
+(define transform-cond
+  (lambda (expr)
+    (cond->if (cond-clauses expr))))
+
 (define cond->if
   (lambda (clauses)
     (cond ((null? clauses) clauses)
@@ -102,13 +110,35 @@
 		     ,(seq->expr (clause-consequent (car clauses)))
 		     ,(cond->if (cdr clauses)))))))
 
-(define let->lambda
+(define transform-let
   (lambda (expr)
     (let ([bindings (cadr expr)]
 	  [body (cddr expr)])
-      `((lambda ,(map car bindings)
-	  ,@body)
-	,@(map cadr bindings)))))
+      (let->lambda bindings body))))
+
+(define let->lambda
+  (lambda (bindings body)
+    `((lambda ,(map car bindings)
+	,@body)
+      ,@(map cadr bindings))))
+
+(define transform-let*
+  (lambda (expr) (let*->nested-lambda (let-bindings expr) (let-body expr))))
+
+(define let-bindings
+  (lambda (expr) (cadr expr)))
+
+(define let-body
+  (lambda (expr) (cddr expr)))
+
+(define let*->nested-lambda
+  (lambda (bindings body)
+    (let ((first (car bindings))
+	  (rest (cdr bindings)))
+      (if (null? rest)
+	  (let->lambda (list first) body)
+	  (let->lambda (list first)
+		       (list (let*->nested-lambda rest body)))))))
 
 (define seq->expr
   (lambda (sequence)
@@ -217,7 +247,7 @@
      (lambda (proc expr expected)
        (let ([actual (apply proc (list expr))])
 	 (if (equal? expected actual)
-	     (display (format "- [x] ~s\n" proc))
+	     (display (format "- [x] ~s statements are transformed\n" (car expr)))
 	     (display (format "- [ ] ~s FAILED - expected <~s> got <~s>\n"
 			      proc
 			      expected
@@ -371,7 +401,7 @@
 	       '(if false (set! x 6) x)
 	       5)
 
-   (test-transformer case->let
+   (test-transformer transform-case
 		     '(case (x)
 			((y) (+ 1 2))
 			((x) (+ 3 2) (- 1 4))
@@ -381,15 +411,35 @@
 			    (+ 1 2)
 			    (if (eqv? k x) (begin (+ 3 2) (- 1 4)) x))))
 
-   (test-transformer let->lambda
+   (test-transformer transform-let
 		     '(let ((x 5) (y 6)) (+ x y) (* x x))
 		     '((lambda (x y) (+ x y) (* x x)) 5 6))
 
-   (test-transformer cond->if
-		     '(((null? x) '())
-		       ((eq? x 'y) x)
-		       (else y))
+   (test-transformer transform-cond
+		     '(cond ((null? x) '())
+			    ((eq? x 'y) x)
+			    (else y))
 		     '(if (null? x)
 			  '()
 			  (if (eq? x 'y) x y)))
+
+   (test-transformer transform-let*
+		     '(let* ((x 3)
+			     (y (+ x 2))
+			     (z (+ x y 5)))
+			(* x z))
+		     '((lambda (x)
+			 ((lambda (y)
+			    ((lambda (z)
+			       (* x z))
+			     (+ x y 5)))
+			  (+ x 2)))
+		       3))
+
+   (with-initial-env "'let* statements are evaluated"
+		     '(let* ((x 3)
+			     (y (+ x 2))
+			     (z (+ x y 5)))
+			(* x z))
+		     39)
    ))
