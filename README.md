@@ -37,3 +37,7 @@ The tests give a good description of the behaviour.
 - [x] cond statements are transformed
 - [x] let* statements are transformed
 - [x] "'let* statements are evaluated"
+
+Ran 28 tests in 0.0s:
+	 28 PASSED
+	  0 FAILED
