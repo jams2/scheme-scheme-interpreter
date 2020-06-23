@@ -3,6 +3,7 @@
   (lambda () (list `((false . ,#f)
 		(true . ,#t)
 		(+ . ,+)
+		(= . ,=)
 		(- . ,-)
 		(* . ,*)
 		(/ . ,/)))))
@@ -33,18 +34,19 @@
 	     [(cond) (evaluate (transform-cond expr) env)]
 	     [(let) (evaluate (transform-let expr) env)]
 	     [(let*) (evaluate (transform-let* expr) env)]
+	     [(letrec) (evaluate (transform-letrec expr) env)]
 	     [else (my-apply (evaluate (rator expr) env)
-		     (eval-list (rands expr) env)
-		     env)])]
+			     (eval-list (rands expr) env)
+			     env)])]
 	  [else (error 'evaluate "Invalid expression" expr)])))
 
 (define my-apply
   (lambda (rator rands env)
     (if (compound-procedure? rator)
 	(eval-sequence (proc-body rator)
-		  (extend-env (proc-args rator)
-			      rands
-			      (proc-env rator)))
+		       (extend-env (proc-args rator)
+				   rands
+				   (proc-env rator)))
 	(scheme-apply rator rands))))
 
 (define expr-match?
@@ -112,9 +114,14 @@
 
 (define transform-let
   (lambda (expr)
-    (let ([bindings (cadr expr)]
-	  [body (cddr expr)])
-      (let->lambda bindings body))))
+    (if (named-let? expr)
+	'()
+	(let ([bindings (cadr expr)]
+	      [body (cddr expr)])
+	  (let->lambda bindings body)))))
+
+(define named-let?
+  (lambda (expr) (symbol? (cadr expr))))
 
 (define let->lambda
   (lambda (bindings body)
@@ -139,6 +146,16 @@
 	  (let->lambda (list first) body)
 	  (let->lambda (list first)
 		       (list (let*->nested-lambda rest body)))))))
+
+(define transform-letrec
+  (lambda (expr)
+    (letrec->let (let-bindings expr) (let-body expr))))
+
+(define letrec->let
+  (lambda (bindings body)
+    `(let ,(map (lambda (x) (list (car x) ''*unassigned*)) bindings)
+       ,@(map (lambda (x) (list 'set! (car x) (cadr x))) bindings)
+       ,@body)))
 
 (define seq->expr
   (lambda (sequence)
@@ -249,197 +266,247 @@
 	   [start (current-time)])
        (if t1
 	   (set! passed (+ 1 passed))
-	   (set! failed (+ 1 failed))) ...
-	   (display (format "\nRan ~d tests in ~fs:\n\t~3d PASSED\n\t~3d FAILED\n"
-			    (+ passed failed)
-			    (- (time-second (current-time))
-			       (time-second start))
-			    passed
-			    failed)))]))
+	   (set! failed (+ 1 failed)))
+       ...
+       (display (format "\nRan ~d tests in ~fs:\n\t~3d PASSED\n\t~3d FAILED\n"
+			(+ passed failed)
+			(- (time-second (current-time))
+			   (time-second start))
+			passed
+			failed)))]))
 
 (define test-transformer
-    (lambda (proc expr expected)
-    (let ([actual (apply proc (list expr))])
-	(if (equal? expected actual)
-	    (begin
+  (lambda (proc expr expected)
+    (let ([actual (call/cc
+		   (lambda (k)
+		     (with-exception-handler (lambda (c)
+					       (display (format "- [!] ~s:\n" (car expr)))
+					       ((base-exception-handler) c))
+		       (lambda () (apply proc (list expr))))))])
+      (if (equal? expected actual)
+	  (begin
 	    (display (format "- [x] ~s statements are transformed\n" (car expr)))
 	    #t)
-	    (begin
-	    (display (format "- [ ] ~s FAILED - expected <~s> got <~s>\n"
-			    proc
-			    expected
-			    actual))
+	  (begin
+	    (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+			     proc
+			     expected
+			     actual))
 	    #f)))))
 
 (define with-initial-env
-    (lambda (description expr expected)
+  (lambda (description expr expected)
     (let ([env (setup-env)])
-	(test-eval description expr expected env))))
+      (test-eval description expr expected env))))
 
 (define with-empty-env
-    (lambda (description expr expected)
+  (lambda (description expr expected)
     (test-eval description expr expected the-empty-env)))
 
 (define with-frame
-    (lambda (frame description expr expected)
+  (lambda (frame description expr expected)
     (let ([env (cons frame (setup-env))])
-	(test-eval description expr expected env))))
+      (test-eval description expr expected env))))
 
 (define with-error
-    (lambda (who desc expr)
+  (lambda (who desc expr)
     (call/cc
-    (lambda (k)
-	(let ([handler
-		(lambda (c)
+     (lambda (k)
+       (let ([handler
+	      (lambda (c)
 		(let ([c-who (condition-who c)])
-		    (if (eq? c-who who)
-			(begin (display (format "- [x] ~s\n" desc))
-			    (k #t))
-			(begin
-			(display (format "- [ ] ~s FAILED - expected <~s> got <~s>\n"
-					desc
-					who
-					c-who))
+		  (if (eq? c-who who)
+		      (begin (display (format "- [x] ~s\n" desc))
+			     (k #t))
+		      (begin
+			(display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+					 desc
+					 who
+					 c-who))
 			(k #f)))))])
-	(with-exception-handler handler
-	    (lambda ()
-	    (evaluate expr (setup-env))
-	    (display (format "- [ ] ~s FAILED - exception not raised\n"
-				desc))
-	    #f)))))))
+	 (with-exception-handler handler
+	   (lambda ()
+	     (evaluate expr (setup-env))
+	     (display (format "- [ ] ~s FAILED - exception not raised\n"
+			      desc))
+	     #f)))))))
 
 (define test-eval
-    (lambda (description expr expected env)
-    (let ([actual (evaluate expr env)])
-	(if (not (equal? expected actual))
-	    (begin
-	    (display (format "- [ ] ~s FAILED - expected <~s> got <~s>\n"
-			    description
-			    expected
-			    actual))
+  (lambda (description expr expected env)
+    (let ([actual (call/cc
+		   (lambda (k)
+		     (with-exception-handler (lambda (c)
+					       (display (format "- [!] ~s:\n" description))
+					       ((base-exception-handler) c))
+		       (lambda () (evaluate expr env)))))])
+      (if (not (equal? expected actual))
+	  (begin
+	    (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+			     description
+			     expected
+			     actual))
 	    #f)
-	    (begin
+	  (begin
 	    (display (format "- [x] ~s\n" description))
 	    #t)))))
 
 (define test-env
-    (lambda (description expr expected env-proc)
+  (lambda (description expr expected env-proc)
     (let ([env (setup-env)])
-	(evaluate expr env)
-	(let ([env-result (env-proc env)])
+      (evaluate expr env)
+      (let ([env-result (env-proc env)])
 	(if (equal? expected env-result)
 	    (begin
-		(display (format "- [x] ~s\n" description))
-		#t)
+	      (display (format "- [x] ~s\n" description))
+	      #t)
 	    (begin
-		(display (format "- [ ] ~s FAILED - expected <~s> got <~s>\n"
-			    description
-			    expected
-			    env-result))
-		#f))))))
+	      (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+			       description
+			       expected
+			       env-result))
+	      #f))))))
 
 (run-tests
-   (with-initial-env "numbers are self-evaluating" '1 1)
-   (with-initial-env "strings are self-evaluating" "hello world" "hello world")
-   (with-frame '((x . 5)) "variables return their bound value" 'x 5)
-   (with-error 'lookup-variable "evaluating an unbound variable causes an exception" 'y)
-   (test-env "'define statements create a binding of var to val in the current scope"
-	     '(define x 5)
-	     5
-	     (lambda (env) (cdaar env)))
-   (with-empty-env "evaluating a lambda returns a 'procedure-tagged list"
-		   '(lambda (x) (+ x y) (display y))
-		   '(procedure (x) ((+ x y) (display y)) ()))
-   (test-env "'define with a lambda evaluates the lambda and binds it to the variable"
-	     '(define proc (lambda (x) (+ x y) (display y)))
-	     'procedure
-	     (lambda (env) (cadaar env)))
-   (test-env "variable definitions evaluate their values before binding"
-	     '(define x (+ 5 11))
-	     '(x . 16)
-	     (lambda (env) (caar env)))
-   (test-env "variable definitions evaluate their values before binding, left left lambda"
-	     '(define x ((lambda (x y) (+ x y)) 5 11))
-	     '(x . 16)
-	     (lambda (env) (caar env)))
-   (test-env "'define updates an existing binding if exists"
-	     '(begin (define x 5) (define x 6))
-	     #t
-	     (lambda (env)
-	       (let ([first-frame (car env)])
-		 (and (equal? (car first-frame) '(x . 6))
-		      (not (equal? (car first-frame) (cadr first-frame)))))))
-   (with-initial-env "primitive procedures are evaluated scheme" '(+ 1 2) 3)
-   (with-initial-env "unary primitives are evaluated by scheme" '(- 2) -2)
-   (with-initial-env "left left lambdas are immediately evaluated and applied"
-		     '((lambda (x) x) 11)
-		     11)
-   (with-frame '((x . (procedure (x) (x) ,(setup-env))))
-	       "defined procedures are applied to their operands"
-	       '(x 11)
-	       11)
-   (with-empty-env "quoted expressions return the expression" ''x 'x)
-   (with-empty-env "quoted lists return the list" ''(x y z) '(x y z))
-   (with-initial-env "'begin expressions eval all subexpressions, returning the last result"
-		     '(begin (+ 1 2) (+ 3 4) (+ 5 6))
-		     11)
-   (test-env "'set! expressions mutate an existing variable in current scope"
-	     '(begin (define x 5) (set! x 11))
-	     #t
-	     (lambda (env)
-	       (let ([first-frame (car env)])
-		 (and (eq? (cdar first-frame) 11)
-		      (not (equal? (car first-frame) (cadr first-frame)))))))
-   (with-error 'set-variable!
-	       "'set! on an undefined var throws an error"
-	       '(set! x 5))
-   (with-initial-env "'if statements evaluate their consequent if the predicate passes"
-		     '(if (+ 1 2) true false)
-		     #t)
-   (with-initial-env "'if statements return false if the predicate fails and there is no alt"
-		     '(if false true)
-		     #f)
-   (with-initial-env "'let statements are evaluated"
-		     '(let ((x 5) (y 6)) (+ x x) (+ x y))
-		     11)
-   (with-frame '((x . 5))
-	       "'if statements do not evaluate their consequent if the predicate fails"
-	       '(if false (set! x 6) x)
-	       5)
-   (test-transformer transform-case
-		     '(case (x)
-			((y) (+ 1 2))
-			((x) (+ 3 2) (- 1 4))
-			(else x))
-		     '(let ([k (x)])
-			(if (eqv? k y)
-			    (+ 1 2)
-			    (if (eqv? k x) (begin (+ 3 2) (- 1 4)) x))))
-   (test-transformer transform-let
-		     '(let ((x 5) (y 6)) (+ x y) (* x x))
-		     '((lambda (x y) (+ x y) (* x x)) 5 6))
-   (test-transformer transform-cond
-		     '(cond ((null? x) '())
-			    ((eq? x 'y) x)
-			    (else y))
-		     '(if (null? x)
-			  '()
-			  (if (eq? x 'y) x y)))
-   (test-transformer transform-let*
-		     '(let* ((x 3)
-			     (y (+ x 2))
-			     (z (+ x y 5)))
-			(* x z))
-		     '((lambda (x)
-			 ((lambda (y)
-			    ((lambda (z)
-			       (* x z))
-			     (+ x y 5)))
-			  (+ x 2)))
-		       3))
-   (with-initial-env "'let* statements are evaluated"
-		     '(let* ((x 3)
-			     (y (+ x 2))
-			     (z (+ x y 5)))
-			(* x z))
-		     39))
+ (with-initial-env "numbers are self-evaluating" '1 1)
+ (with-initial-env "strings are self-evaluating" "hello world" "hello world")
+ (with-frame '((x . 5)) "variables return their bound value" 'x 5)
+ (with-error 'lookup-variable "evaluating an unbound variable causes an exception" 'y)
+ (test-env "'define statements create a binding of var to val in the current scope"
+	   '(define x 5)
+	   5
+	   (lambda (env) (cdaar env)))
+ (with-empty-env "evaluating a lambda returns a 'procedure-tagged list"
+		 '(lambda (x) (+ x y) (display y))
+		 '(procedure (x) ((+ x y) (display y)) ()))
+ (test-env "'define with a lambda evaluates the lambda and binds it to the variable"
+	   '(define proc (lambda (x) (+ x y) (display y)))
+	   'procedure
+	   (lambda (env) (cadaar env)))
+ (test-env "variable definitions evaluate their values before binding"
+	   '(define x (+ 5 11))
+	   '(x . 16)
+	   (lambda (env) (caar env)))
+ (test-env "variable definitions evaluate their values before binding, left left lambda"
+	   '(define x ((lambda (x y) (+ x y)) 5 11))
+	   '(x . 16)
+	   (lambda (env) (caar env)))
+ (test-env "'define updates an existing binding if exists"
+	   '(begin (define x 5) (define x 6))
+	   #t
+	   (lambda (env)
+	     (let ([first-frame (car env)])
+	       (and (equal? (car first-frame) '(x . 6))
+		    (not (equal? (car first-frame) (cadr first-frame)))))))
+ (with-initial-env "primitive procedures are evaluated scheme" '(+ 1 2) 3)
+ (with-initial-env "unary primitives are evaluated by scheme" '(- 2) -2)
+ (with-initial-env "left left lambdas are immediately evaluated and applied"
+		   '((lambda (x) x) 11)
+		   11)
+ (with-frame '((x . (procedure (x) (x) ,(setup-env))))
+	     "defined procedures are applied to their operands"
+	     '(x 11)
+	     11)
+ (with-empty-env "quoted expressions return the expression" ''x 'x)
+ (with-empty-env "quoted lists return the list" ''(x y z) '(x y z))
+ (with-initial-env "'begin expressions eval all subexpressions, returning the last result"
+		   '(begin (+ 1 2) (+ 3 4) (+ 5 6))
+		   11)
+ (test-env "'set! expressions mutate an existing variable in current scope"
+	   '(begin (define x 5) (set! x 11))
+	   #t
+	   (lambda (env)
+	     (let ([first-frame (car env)])
+	       (and (eq? (cdar first-frame) 11)
+		    (not (equal? (car first-frame) (cadr first-frame)))))))
+ (with-error 'set-variable!
+	     "'set! on an undefined var throws an error"
+	     '(set! x 5))
+ (with-initial-env "'if statements evaluate their consequent if the predicate passes"
+		   '(if (+ 1 2) true false)
+		   #t)
+ (with-initial-env "'if statements return false if the predicate fails and there is no alt"
+		   '(if false true)
+		   #f)
+ (with-initial-env "'let statements are evaluated"
+		   '(let ((x 5) (y 6)) (+ x x) (+ x y))
+		   11)
+ (with-frame '((x . 5))
+	     "'if statements do not evaluate their consequent if the predicate fails"
+	     '(if false (set! x 6) x)
+	     5)
+ (test-transformer transform-case
+		   '(case (x)
+		      ((y) (+ 1 2))
+		      ((x) (+ 3 2) (- 1 4))
+		      (else x))
+		   '(let ([k (x)])
+		      (if (eqv? k y)
+			  (+ 1 2)
+			  (if (eqv? k x) (begin (+ 3 2) (- 1 4)) x))))
+ (test-transformer transform-let
+		   '(let ((x 5) (y 6)) (+ x y) (* x x))
+		   '((lambda (x y) (+ x y) (* x x)) 5 6))
+ (test-transformer transform-cond
+		   '(cond ((null? x) '())
+			  ((eq? x 'y) x)
+			  (else y))
+		   '(if (null? x)
+			'()
+			(if (eq? x 'y) x y)))
+ (test-transformer transform-let*
+		   '(let* ((x 3)
+			   (y (+ x 2))
+			   (z (+ x y 5)))
+		      (* x z))
+		   '((lambda (x)
+		       ((lambda (y)
+			  ((lambda (z)
+			     (* x z))
+			   (+ x y 5)))
+			(+ x 2)))
+		     3))
+ (with-initial-env "'let* statements are evaluated"
+		   '(let* ((x 3)
+			   (y (+ x 2))
+			   (z (+ x y 5)))
+		      (* x z))
+		   39)
+ (with-initial-env "named let statements are evaluated"
+ 		   '(let fact ((n 5) (total 1))
+ 		      (if (= 0 n)
+ 			  1
+ 			  (* n (fact (- n 1)))))
+ 		   120)
+ (with-initial-env "letrec handles mutually recursive procedures in its bindings"
+ 		   '(letrec ([even? (lambda (n)
+ 				      (if (= 0 n)
+ 					  true
+ 					  (odd? (- n 1))))]
+ 			     [odd? (lambda (n)
+ 				     (if (= 0 n)
+ 					 false
+ 					 (even? (- n 1))))])
+ 		      (even? 5))
+ 		   #f)
+ (test-transformer transform-letrec
+		   '(letrec ([even? (lambda (n)
+				      (if (= 0 n)
+					  true
+					  (odd? (- n 1))))]
+			     [odd? (lambda (n)
+				     (if (= 0 n)
+					 true
+					 (even? (- n 1))))])
+		      (even? 5))
+		   '(let ([even? '*unassigned*]
+			  [odd? '*unassigned*])
+		      (set! even? (lambda (n)
+				    (if (= 0 n)
+					true
+					(odd? (- n 1)))))
+		      (set! odd? (lambda (n)
+				   (if (= 0 n)
+				       true
+				       (even? (- n 1)))))
+		      (even? 5)))
+ )

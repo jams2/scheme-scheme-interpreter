@@ -1,6 +1,6 @@
 # Scheme Interpreter
 
-This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of The Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
+This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
 
 The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go. I'm using an alist representation of environment frames, but it's somewhat arbitrary.
 
@@ -37,7 +37,6 @@ The tests give a good description of the behaviour.
 - [x] cond statements are transformed
 - [x] let* statements are transformed
 - [x] "'let* statements are evaluated"
-
-Ran 28 tests in 0.0s:
-	 28 PASSED
-	  0 FAILED
+- [!] "named let statements are evaluated":
+Exception in evaluate: Invalid expression with irritant ()
+Type (debug) to enter the debugger.
