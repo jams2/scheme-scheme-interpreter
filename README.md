@@ -32,16 +32,17 @@ The tests give a good description of the behaviour.
 - [x] "'if statements return false if the predicate fails and there is no alt"
 - [x] "'let statements are evaluated"
 - [x] "'if statements do not evaluate their consequent if the predicate fails"
-- [x] case statements are transformed
-- [x] let statements are transformed
-- [x] cond statements are transformed
-- [x] let* statements are transformed
+- [x] case statements are transformed to let
+- [x] let statements are transformed to lambda
+- [x] cond statements are transformed to if
+- [x] let* statements are transformed to lambda
 - [x] "'let* statements are evaluated"
 - [x] "named let statements are evaluated"
 - [x] "letrec handles mutually recursive procedures in its bindings"
-- [x] letrec statements are transformed
-- [x] let statements are transformed
+- [x] letrec statements are transformed to let
+- [x] let statements are transformed to letrec
+- [x] "cond clauses with arrow forms are evaluated"
 
-Ran 32 tests in 0.0s:
-	 32 PASSED
-	  0 FAILED
+Ran 33 tests in 0.0s:
+	-  33 PASSED
+	-   0 FAILED

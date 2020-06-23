@@ -102,11 +102,35 @@
 
 (define cond->if
   (lambda (clauses)
-    (cond ((null? clauses) clauses)
-	  ((eq? (caar clauses) 'else) (seq->expr (clause-consequent (car clauses))))
-	  (else `(if ,(clause-predicate (car clauses))
-		     ,(seq->expr (clause-consequent (car clauses)))
-		     ,(cond->if (cdr clauses)))))))
+    (if (null? clauses)
+	clauses
+	(let ([clause (car clauses)])
+	  (cond ((else-clause? clause) (seq->expr (clause-consequent clause)))
+		((arrow-form? clause) (arrow-form->let (arrow-form-predicate clause)
+						       (arrow-form-proc clause)
+						       (cdr clauses)))
+		(else `(if ,(clause-predicate clause)
+			   ,(seq->expr (clause-consequent clause))
+			   ,(cond->if (cdr clauses)))))))))
+
+(define else-clause?
+  (lambda (clause) (eq? (car clause) 'else)))
+
+(define arrow-form?
+  (lambda (clause) (eq? (cadr clause) '=>)))
+
+(define arrow-form->let
+  (lambda (pred proc rest-clauses)
+    `(let ([arrow-result ,pred])
+       (if arrow-result
+	   (,proc arrow-result)
+	   ,(cond->if rest-clauses)))))
+
+(define arrow-form-predicate
+  (lambda (expr) (car expr)))
+
+(define arrow-form-proc
+  (lambda (expr) (caddr expr)))
 
 (define transform-let
   (lambda (expr)
@@ -285,7 +309,7 @@
 	   (set! passed (+ 1 passed))
 	   (set! failed (+ 1 failed)))
        ...
-       (display (format "\nRan ~d tests in ~fs:\n\t~3d PASSED\n\t~3d FAILED\n"
+       (display (format "\nRan ~d tests in ~fs:\n\t- ~3d PASSED\n\t- ~3d FAILED\n"
 			(+ passed failed)
 			(- (time-second (current-time))
 			   (time-second start))
@@ -302,7 +326,9 @@
 		       (lambda () (apply proc (list expr))))))])
       (if (equal? expected actual)
 	  (begin
-	    (display (format "- [x] ~s statements are transformed\n" (car expr)))
+	    (display (format "- [x] ~s statements are transformed to ~s\n"
+			     (car expr)
+			     (first-symbol actual)))
 	    #t)
 	  (begin
 	    (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
@@ -310,6 +336,10 @@
 			     expected
 			     actual))
 	    #f)))))
+
+(define first-symbol
+  (lambda (expr)
+    (if (symbol? expr) expr (first-symbol (car expr)))))
 
 (define with-initial-env
   (lambda (description expr expected)
@@ -538,4 +568,9 @@
 		       fact)
 		     5
 		     1))
+ (with-initial-env "cond clauses with arrow forms are evaluated"
+		   '(cond ((= (+ 1 1) 1) 1)
+			  ((+ 1 1) => -)
+			  (else 2))
+		   -2)
  )
