@@ -75,8 +75,6 @@ Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus
 
 ## Tests
 
-The tests give a good description of the behaviour.
-
 - [x] "numbers are self-evaluating"
 - [x] "strings are self-evaluating"
 - [x] "variables return their bound value"
@@ -117,8 +115,11 @@ The tests give a good description of the behaviour.
 - [x] "or forms return false if no clauses"
 - [x] "or forms return false if all expressions evaluate to false"
 - [x] "internal definitions are hoisted"
+- [x] "nested lets with assignments do not violate lexical scope"
+- [x] "combinator fib is evaluated"
+- [x] "combinator mutually recursive even? is evaluated"
 
-Ran 40 tests in 0.0s:
+Ran 43 tests in 0.0s:
 
-	-  40 PASSED
+	-  43 PASSED
 	-   0 FAILED
