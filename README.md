@@ -42,7 +42,7 @@ or left "as is", to be evaluated when the left-left-lambda is evaluated?
 
 ```scheme
 (let ([x (+ 2 2)]) (* x x))
->>> ((lambda (x) (* x x)) (+ 2 2)))
+>>> ((lambda (x) (* x x)) (+ 2 2))
 ```
 
 There is a pleasing separation of concern to performing only syntactic transformation in the transformers, but are there cases where subsequent modifications to the environment will cause unexpected behaviour? Examine an example where the value of the let binding references an object in the enclosing scope:
@@ -67,10 +67,10 @@ There is a pleasing separation of concern to performing only syntactic transform
 ((lambda (x)
     (set! y 6)
     x)
- (* 5 y)))
+ (* 5 5))
 ```
 
-Then `(* 5 y)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Let me know if you can see a way to break this!
+Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
 ## Tests

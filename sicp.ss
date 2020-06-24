@@ -307,9 +307,9 @@
   (lambda (var val env)
     (let* ([first-frame (car env)]
 	   [existing (assoc var first-frame)])
-      (if existing
-	  (set-cdr! existing val)
-	  (error 'set-variable! "Unbound variable" var)))))
+      (cond (existing (set-cdr! existing val))
+	    ((null? (cdr env)) (error 'set-variable! "Unbound variable" var))
+	    (else (set-variable! var val (cdr env)))))))
 
 (define definition-var
   (lambda (expr) (cadr expr)))
@@ -660,12 +660,18 @@
 		   '(let ([even? '*unassigned*]
 			  [odd? '*unassigned*])
 		      (set! even? (lambda (n)
-				   (if (= 0 n)
-				       true
-				       (odd? (- n 1)))))
+				    (if (= 0 n)
+					true
+					(odd? (- n 1)))))
 		      (set! odd? (lambda (n)
-				  (if (= 0 n)
-				      false
-				      (even? (- n 1)))))
+				   (if (= 0 n)
+				       false
+				       (even? (- n 1)))))
 		      (even? 5)))
+ (with-initial-env "nested lets with assignments do not violate lexical scope"
+		   '(let ([y 5])
+		      (let ([x (* 5 y)])
+			(set! y 6)
+			x))
+		   25)
  )
