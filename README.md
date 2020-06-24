@@ -28,21 +28,28 @@ The tests give a good description of the behaviour.
 - [x] "'begin expressions eval all subexpressions, returning the last result"
 - [x] "'set! expressions mutate an existing variable in current scope"
 - [x] "'set! on an undefined var throws an error"
-- [x] "'if statements evaluate their consequent if the predicate passes"
-- [x] "'if statements return false if the predicate fails and there is no alt"
-- [x] "'let statements are evaluated"
-- [x] "'if statements do not evaluate their consequent if the predicate fails"
-- [x] case statements are transformed to let
-- [x] let statements are transformed to lambda
-- [x] cond statements are transformed to if
-- [x] let* statements are transformed to lambda
-- [x] "'let* statements are evaluated"
-- [x] "named let statements are evaluated"
+- [x] "'if forms evaluate their consequent if the predicate passes"
+- [x] "'if forms return false if the predicate fails and there is no alt"
+- [x] "'let forms are evaluated"
+- [x] "'if forms do not evaluate their consequent if the predicate fails"
+- [x] case forms are transformed to let
+- [x] let forms are transformed to lambda
+- [x] cond forms are transformed to if
+- [x] let* forms are transformed to lambda
+- [x] "'let* forms are evaluated"
+- [x] "named let forms are evaluated"
 - [x] "letrec handles mutually recursive procedures in its bindings"
-- [x] letrec statements are transformed to let
-- [x] let statements are transformed to letrec
+- [x] letrec forms are transformed to let
+- [x] let forms are transformed to letrec
 - [x] "cond clauses with arrow forms are evaluated"
+- [x] "and forms short-circuit"
+- [x] "and forms return true if no clauses"
+- [x] "and forms return the value of the last expression if all true"
+- [x] "or forms return the first value that evaluates to true"
+- [x] "or forms return false if no clauses"
+- [x] "or forms return false if all expressions evaluate to false"
 
-Ran 33 tests in 0.0s:
-	-  33 PASSED
+Ran 39 tests in 0.0s:
+
+	-  39 PASSED
 	-   0 FAILED
