@@ -32,15 +32,15 @@ The tests give a good description of the behaviour.
 - [x] "'if forms return false if the predicate fails and there is no alt"
 - [x] "'let forms are evaluated"
 - [x] "'if forms do not evaluate their consequent if the predicate fails"
-- [x] case forms are transformed to let
-- [x] let forms are transformed to lambda
-- [x] cond forms are transformed to if
-- [x] let* forms are transformed to lambda
+- [x] "case forms are transformed to let"
+- [x] "let forms are transformed to left left lambdas"
+- [x] "cond forms are transformed to series of if forms"
+- [x] "let* forms are transformed to nested l l lambdas"
 - [x] "'let* forms are evaluated"
 - [x] "named let forms are evaluated"
 - [x] "letrec handles mutually recursive procedures in its bindings"
-- [x] letrec forms are transformed to let
-- [x] let forms are transformed to letrec
+- [x] "letrec forms transform to let with simultaneous scope"
+- [x] "named-let forms are transformed to letrec"
 - [x] "cond clauses with arrow forms are evaluated"
 - [x] "and forms short-circuit"
 - [x] "and forms return true if no clauses"
@@ -48,8 +48,9 @@ The tests give a good description of the behaviour.
 - [x] "or forms return the first value that evaluates to true"
 - [x] "or forms return false if no clauses"
 - [x] "or forms return false if all expressions evaluate to false"
+- [x] "internal definitions are hoisted"
 
-Ran 39 tests in 0.0s:
+Ran 40 tests in 0.0s:
 
-	-  39 PASSED
+	-  40 PASSED
 	-   0 FAILED

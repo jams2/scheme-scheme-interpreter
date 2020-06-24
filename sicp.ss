@@ -112,14 +112,16 @@
   (lambda (clauses)
     (if (null? clauses)
 	clauses
-	(let ([clause (car clauses)])
-	  (cond ((else-clause? clause) (seq->expr (clause-consequent clause)))
-		((arrow-form? clause) (arrow-form->let (arrow-form-predicate clause)
-						       (arrow-form-proc clause)
-						       (cdr clauses)))
-		(else `(if ,(clause-predicate clause)
-			   ,(seq->expr (clause-consequent clause))
-			   ,(cond->if (cdr clauses)))))))))
+	(let ([first-clause (car clauses)]
+	      [rest (cdr clauses)])
+	  (cond ((else-clause? first-clause) (seq->expr (clause-consequent first-clause)))
+		((arrow-form? first-clause) (arrow-form->let
+					     (arrow-form-predicate first-clause)
+					     (arrow-form-proc first-clause)
+					     rest))
+		(else `(if ,(clause-predicate first-clause)
+			   ,(seq->expr (clause-consequent first-clause))
+			   ,(cond->if rest))))))))
 
 (define else-clause?
   (lambda (clause) (eq? (car clause) 'else)))
@@ -246,7 +248,7 @@
 
 (define make-procedure
   (lambda (args body env)
-    (list 'procedure args body env)))
+    (list 'procedure args (internal-definitions->let body) env)))
 
 (define proc-args
   (lambda (p) (cadr p)))
@@ -274,6 +276,21 @@
 	  (cond ((true? val) val)
 		((null? (cdr exprs)) 'false)
 		((eval-or (cdr exprs) env)))))))
+
+(define internal-definitions->let
+  (lambda (body)
+    (let* ([defines (filter (lambda (x)
+			      (and (list? x)
+				   (eq? (car x) 'define)))
+			    body)]
+	   [rest (filter (lambda (x) (or (not (list? x))
+				    (not (eq? (car x) 'define))))
+			 body)])
+      (if (null? defines)
+	  body
+	  `(let ,(map (lambda (x) (list (cadr x) ''*unassigned*)) defines)
+	     ,@(map (lambda (x) (list 'set! (cadr x) (caddr x))) defines)
+	     ,@rest)))))
 
 
 ;; environment procedures
@@ -318,9 +335,11 @@
     (define scan-frame
       (lambda (frame env)
 	(let ([result (assoc var frame)])
-	  (if result
-	      (cdr result)
-	      (scan-env (cdr env))))))
+	  (cond ((eq? result '*unnassigned*) (error 'lookup-variable
+						    "unassigned variable"
+						    var))
+		(result (cdr result))
+		(else (scan-env (cdr env)))))))
     (define scan-env
       (lambda (env)
 	(if (eq? env the-empty-env)
@@ -346,22 +365,20 @@
 			failed)))]))
 
 (define test-transformer
-  (lambda (proc expr expected)
+  (lambda (desc proc expr expected)
     (let ([actual (call/cc
 		   (lambda (k)
 		     (with-exception-handler (lambda (c)
-					       (display (format "- [!] ~s:\n" (car expr)))
+					       (display (format "- [!] ~s:\n" desc))
 					       ((base-exception-handler) c))
 		       (lambda () (apply proc (list expr))))))])
       (if (equal? expected actual)
 	  (begin
-	    (display (format "- [x] ~s forms are transformed to ~s\n"
-			     (car expr)
-			     (first-symbol actual)))
+	    (display (format "- [x] ~s\n" desc))
 	    #t)
 	  (begin
-	    (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
-			     proc
+	    (display (format "- [ ] ~s FAILED -\n\texpected ~s\n\tgot      ~s\n"
+			     desc
 			     expected
 			     actual))
 	    #f)))))
@@ -395,7 +412,7 @@
 		      (begin (display (format "- [x] ~s\n" desc))
 			     (k #t))
 		      (begin
-			(display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+			(display (format "- [ ] ~s FAILED -\n\texpected ~s\n\tgot ~s\n"
 					 desc
 					 who
 					 c-who))
@@ -417,7 +434,7 @@
 		       (lambda () (evaluate expr env)))))])
       (if (not (equal? expected actual))
 	  (begin
-	    (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+	    (display (format "- [ ] ~s FAILED -\n\texpected ~s\n\tgot ~s\n"
 			     description
 			     expected
 			     actual))
@@ -436,7 +453,7 @@
 	      (display (format "- [x] ~s\n" description))
 	      #t)
 	    (begin
-	      (display (format "- [ ] ~s FAILED -\n\texpected <~s>\n\tgot <~s>\n"
+	      (display (format "- [ ] ~s FAILED -\n\texpected ~s\n\tgot ~s\n"
 			       description
 			       expected
 			       env-result))
@@ -510,7 +527,8 @@
 	     "'if forms do not evaluate their consequent if the predicate fails"
 	     '(if false (set! x 6) x)
 	     5)
- (test-transformer transform-case
+ (test-transformer "case forms are transformed to let"
+		   transform-case
 		   '(case (x)
 		      ((y) (+ 1 2))
 		      ((x) (+ 3 2) (- 1 4))
@@ -519,17 +537,20 @@
 		      (if (eqv? k y)
 			  (+ 1 2)
 			  (if (eqv? k x) (begin (+ 3 2) (- 1 4)) x))))
- (test-transformer transform-let
+ (test-transformer "let forms are transformed to left left lambdas"
+		   transform-let
 		   '(let ((x 5) (y 6)) (+ x y) (* x x))
 		   '((lambda (x y) (+ x y) (* x x)) 5 6))
- (test-transformer transform-cond
+ (test-transformer "cond forms are transformed to series of if forms"
+		   transform-cond
 		   '(cond ((null? x) '())
 			  ((eq? x 'y) x)
 			  (else y))
 		   '(if (null? x)
 			'()
 			(if (eq? x 'y) x y)))
- (test-transformer transform-let*
+ (test-transformer "let* forms are transformed to nested l l lambdas"
+		   transform-let*
 		   '(let* ((x 3)
 			   (y (+ x 2))
 			   (z (+ x y 5)))
@@ -548,23 +569,24 @@
 		      (* x z))
 		   39)
  (with-initial-env "named let forms are evaluated"
- 		   '(let fact ((n 5) (total 1))
- 		      (if (= 0 n)
- 			  total
- 			  (fact (- n 1) (* total n))))
- 		   120)
+		   '(let fact ((n 5) (total 1))
+		      (if (= 0 n)
+			  total
+			  (fact (- n 1) (* total n))))
+		   120)
  (with-initial-env "letrec handles mutually recursive procedures in its bindings"
- 		   '(letrec ([even? (lambda (n)
- 				      (if (= 0 n)
- 					  true
- 					  (odd? (- n 1))))]
- 			     [odd? (lambda (n)
- 				     (if (= 0 n)
- 					 false
- 					 (even? (- n 1))))])
- 		      (even? 5))
- 		   #f)
- (test-transformer transform-letrec
+		   '(letrec ([even? (lambda (n)
+				      (if (= 0 n)
+					  true
+					  (odd? (- n 1))))]
+			     [odd? (lambda (n)
+				     (if (= 0 n)
+					 false
+					 (even? (- n 1))))])
+		      (even? 5))
+		   #f)
+ (test-transformer "letrec forms transform to let with simultaneous scope"
+		   transform-letrec
 		   '(letrec ([even? (lambda (n)
 				      (if (= 0 n)
 					  true
@@ -585,11 +607,12 @@
 				       true
 				       (even? (- n 1)))))
 		      (even? 5)))
- (test-transformer transform-named-let
+ (test-transformer "named-let forms are transformed to letrec"
+		   transform-named-let
 		   '(let fact ((n 5) (total 1))
- 		      (if (= 0 n)
- 			  1
- 			  (* n (fact (- n 1)))))
+		      (if (= 0 n)
+			  1
+			  (* n (fact (- n 1)))))
 		   '((letrec ([fact (lambda (n total)
 				      (if (= 0 n)
 					  1
@@ -623,4 +646,26 @@
  (with-initial-env "or forms return false if all expressions evaluate to false"
 		   '(or false false false)
 		   'false)
+ (test-transformer "internal definitions are hoisted"
+		   internal-definitions->let
+		   '((define even? (lambda (n)
+				     (if (= 0 n)
+					 true
+					 (odd? (- n 1)))))
+		     (define odd? (lambda (n)
+				    (if (= 0 n)
+					false
+					(even? (- n 1)))))
+		     (even? 5))
+		   '(let ([even? '*unassigned*]
+			  [odd? '*unassigned*])
+		      (set! even? (lambda (n)
+				   (if (= 0 n)
+				       true
+				       (odd? (- n 1)))))
+		      (set! odd? (lambda (n)
+				  (if (= 0 n)
+				      false
+				      (even? (- n 1)))))
+		      (even? 5)))
  )
