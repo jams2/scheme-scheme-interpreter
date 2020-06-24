@@ -49,6 +49,12 @@
 				   (proc-env rator)))
 	(scheme-apply rator rands))))
 
+(define true?
+  (lambda (expr) (not (eq? expr #f))))
+
+(define false?
+  (lambda (expr) (eq? expr #f)))
+
 (define eval-list
   (lambda (l env)
     (if (null? l)
@@ -66,7 +72,7 @@
 (define eval-if
   (lambda (expr env)
     (let ([result (evaluate (if-predicate expr) env)])
-      (if result
+      (if (true? result)
 	  (evaluate (if-consequent expr) env)
 	  (evaluate (if-alternative expr) env)))))
 
@@ -309,7 +315,7 @@
 	   (set! passed (+ 1 passed))
 	   (set! failed (+ 1 failed)))
        ...
-       (display (format "\nRan ~d tests in ~fs:\n\t- ~3d PASSED\n\t- ~3d FAILED\n"
+       (display (format "\nRan ~d tests in ~fs:\n\n\t- ~3d PASSED\n\t- ~3d FAILED\n"
 			(+ passed failed)
 			(- (time-second (current-time))
 			   (time-second start))
