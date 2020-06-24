@@ -35,6 +35,8 @@
 	     [(let) (evaluate (transform-let expr) env)]
 	     [(let*) (evaluate (transform-let* expr) env)]
 	     [(letrec) (evaluate (transform-letrec expr) env)]
+	     [(and) (eval-and (cdr expr) env)]
+	     [(or) (eval-or (cdr expr) env)]
 	     [else (my-apply (evaluate (rator expr) env)
 			     (eval-list (rands expr) env)
 			     env)])]
@@ -255,6 +257,27 @@
 (define proc-env
   (lambda (p) (cadddr p)))
 
+(define eval-and
+  (lambda (exprs env)
+    (if (null? exprs)
+	'true
+	(let ([val (evaluate (car exprs) env)])
+	  (cond ((null? (cdr exprs)) val)
+		((true? val) (eval-and (cdr exprs) env))
+		(else 'false))))))
+
+(define eval-or
+  (lambda (exprs env)
+    (if (null? exprs)
+	'false
+	(let ([val (evaluate (car exprs) env)])
+	  (cond ((true? val) val)
+		((null? (cdr exprs)) 'false)
+		((eval-or (cdr exprs) env)))))))
+
+
+;; environment procedures
+
 (define define-variable!
   (lambda (var val env)
     (let* ([first-frame (car env)]
@@ -332,7 +355,7 @@
 		       (lambda () (apply proc (list expr))))))])
       (if (equal? expected actual)
 	  (begin
-	    (display (format "- [x] ~s statements are transformed to ~s\n"
+	    (display (format "- [x] ~s forms are transformed to ~s\n"
 			     (car expr)
 			     (first-symbol actual)))
 	    #t)
@@ -474,17 +497,17 @@
  (with-error 'set-variable!
 	     "'set! on an undefined var throws an error"
 	     '(set! x 5))
- (with-initial-env "'if statements evaluate their consequent if the predicate passes"
+ (with-initial-env "'if forms evaluate their consequent if the predicate passes"
 		   '(if (+ 1 2) true false)
 		   #t)
- (with-initial-env "'if statements return false if the predicate fails and there is no alt"
+ (with-initial-env "'if forms return false if the predicate fails and there is no alt"
 		   '(if false true)
 		   #f)
- (with-initial-env "'let statements are evaluated"
+ (with-initial-env "'let forms are evaluated"
 		   '(let ((x 5) (y 6)) (+ x x) (+ x y))
 		   11)
  (with-frame '((x . 5))
-	     "'if statements do not evaluate their consequent if the predicate fails"
+	     "'if forms do not evaluate their consequent if the predicate fails"
 	     '(if false (set! x 6) x)
 	     5)
  (test-transformer transform-case
@@ -518,13 +541,13 @@
 			   (+ x y 5)))
 			(+ x 2)))
 		     3))
- (with-initial-env "'let* statements are evaluated"
+ (with-initial-env "'let* forms are evaluated"
 		   '(let* ((x 3)
 			   (y (+ x 2))
 			   (z (+ x y 5)))
 		      (* x z))
 		   39)
- (with-initial-env "named let statements are evaluated"
+ (with-initial-env "named let forms are evaluated"
  		   '(let fact ((n 5) (total 1))
  		      (if (= 0 n)
  			  total
@@ -579,4 +602,25 @@
 			  ((+ 1 1) => -)
 			  (else 2))
 		   -2)
+ (with-initial-env "and forms short-circuit"
+		   '(begin
+		      (define x 0)
+		      (and (set! x 1) (set! x 2) false (set! x 3))
+		      x)
+		   2)
+ (with-initial-env "and forms return true if no clauses"
+		   '(and)
+		   'true)
+ (with-initial-env "and forms return the value of the last expression if all true"
+		   '(and 1 2 true 3 'final)
+		   'final)
+ (with-initial-env "or forms return the first value that evaluates to true"
+		   '(or false false 3)
+		   3)
+ (with-initial-env "or forms return false if no clauses"
+		   '(or)
+		   'false)
+ (with-initial-env "or forms return false if all expressions evaluate to false"
+		   '(or false false false)
+		   'false)
  )
