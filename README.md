@@ -10,44 +10,44 @@ The idea is to implement an environment passing interpreter, with lexical scope.
 
 The interpreter, like Scheme, follows applicative order evaluation. All expressions are evaluated before being passed into procedures. Take, for example, the simple example:
 
-'''scheme
+```scheme
 (define mult (lambda (x y) (* x y)))
 (mult (+ 1 2) (* 3 4))
-'''
+```
 
 Left to right order is unspecified, but the expressions '(+ 1 2)' and '(* 3 4)' should be evaluated before being passed into the 'mult' procedure:
 
-'''scheme
+```scheme
 (mult (+ 1 2) (* 3 4))
 (mult 3 12)
 (* 3 12)
 36
-'''
+```
 
 What about the case of syntax transformations? For example, we transform 'let' forms into immediately applied anonymous procedures, as such:
 
-'''scheme
+```scheme
 (let ([x 5]) (* x x))
 >>> ((lambda (x) (* x x)) 5)
-'''
+```
 
 If our let binding value is itself a combination, should it be evaluated at the time of transformation, like so;
 
-'''scheme
+```scheme
 (let ([x (+ 2 2)]) (* x x))
 >>> ((lambda (x) (* x x)) 4)
-'''
+```
 
 or left "as is", to be evaluated when the left-left-lambda is evaluated?
 
-'''scheme
+```scheme
 (let ([x (+ 2 2)]) (* x x))
 >>> ((lambda (x) (* x x)) (+ 2 2)))
-'''
+```
 
 There is a pleasing separation of concern to performing only syntactic transformation in the transformers, but are there cases where subsequent modifications to the environment will cause unexpected behaviour? Examine an example where the value of the let binding references an object in the enclosing scope:
 
-'''scheme
+```scheme
 (let ([y 5])
     (let ([x (* 5 y)])
 	(set! y 6)
@@ -59,16 +59,16 @@ There is a pleasing separation of concern to performing only syntactic transform
 		x)
 	    (* 5 y)))
     5)
-'''
+```
 
 5 is associated with y in the frame constructed by evaluating the outer lambda;
 
-'''scheme
+```scheme
 ((lambda (x)
     (set! y 6)
     x)
  (* 5 y)))
-'''
+```
 
 Then '(* 5 y)' is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Let me know if you can see a way to break this!
 
