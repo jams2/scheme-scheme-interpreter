@@ -15,7 +15,7 @@ The interpreter, like Scheme, follows applicative order evaluation. All expressi
 (mult (+ 1 2) (* 3 4))
 ```
 
-Left to right order is unspecified, but the expressions '(+ 1 2)' and '(* 3 4)' should be evaluated before being passed into the 'mult' procedure:
+Left to right order is unspecified, but the expressions `(+ 1 2)` and `(* 3 4)` should be evaluated before being passed into the `mult` procedure:
 
 ```scheme
 (mult (+ 1 2) (* 3 4))
@@ -24,7 +24,7 @@ Left to right order is unspecified, but the expressions '(+ 1 2)' and '(* 3 4)' 
 36
 ```
 
-What about the case of syntax transformations? For example, we transform 'let' forms into immediately applied anonymous procedures, as such:
+What about the case of syntax transformations? For example, we transform `let` forms into immediately applied anonymous procedures, as such:
 
 ```scheme
 (let ([x 5]) (* x x))
@@ -70,7 +70,7 @@ There is a pleasing separation of concern to performing only syntactic transform
  (* 5 y)))
 ```
 
-Then '(* 5 y)' is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Let me know if you can see a way to break this!
+Then `(* 5 y)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Let me know if you can see a way to break this!
 
 
 ## Tests
