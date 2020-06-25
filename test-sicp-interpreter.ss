@@ -10,12 +10,15 @@
 	   (set! passed (+ 1 passed))
 	   (set! failed (+ 1 failed)))
        ...
-       (display (format "\nRan ~d tests in ~fs:\n\n\t- ~3d PASSED\n\t- ~3d FAILED\n"
+       (display (format "\nRan ~d tests in ~7fs:\n\n\t- ~3d PASSED\n\t- ~3d FAILED\n"
 			(+ passed failed)
-			(- (time-second (current-time))
-			   (time-second start))
+			(ns->s (- (time-nanosecond (current-time))
+				  (time-nanosecond start)))
 			passed
 			failed)))]))
+
+(define ns->s
+  (lambda (ns) (/ ns 1e9)))
 
 (define test-transformer
   (lambda (desc proc expr expected)
@@ -35,10 +38,6 @@
 			     expected
 			     actual))
 	    #f)))))
-
-(define first-symbol
-  (lambda (expr)
-    (if (symbol? expr) expr (first-symbol (car expr)))))
 
 (define with-initial-env
   (lambda (description expr expected)

@@ -1,9 +1,10 @@
 # Scheme Interpreter
 
-This is a Scheme interpreter, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
+This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs ([wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html)), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
 
 The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go. I'm using an alist representation of environment frames, but it's somewhat arbitrary.
 
+See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ((4.1.7)[https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7] in SICP).
 
 ## Points of interest
 ### Evaluation order in the case of syntax transformations
@@ -74,6 +75,7 @@ Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus
 
 
 ## Tests
+### The First Interpreter
 
 - [x] "numbers are self-evaluating"
 - [x] "strings are self-evaluating"
@@ -119,7 +121,7 @@ Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus
 - [x] "combinator fib is evaluated"
 - [x] "combinator mutually recursive even? is evaluated"
 
-Ran 43 tests in 0.0s:
+Ran 43 tests in .000234s:
 
 	-  43 PASSED
 	-   0 FAILED
