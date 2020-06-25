@@ -1,30 +1,28 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreter](#org551d7fb)
-    1.  [Points of interest](#orgb3a2f3a)
-        1.  [Evaluation order in the case of syntax transformations](#org05a03be)
-    2.  [Tests](#org03ac405)
-        1.  [The First Interpreter](#org2d60d0e)
+1.  [Scheme Interpreter](#orge9c544a)
+    1.  [Points of interest](#org0e8b51e)
+        1.  [Evaluation order in the case of syntax transformations](#org77f8b3a)
+    2.  [Tests](#orgcfa9fb8)
+        1.  [The First Interpreter](#orge28bed3)
 
 
-<a id="org551d7fb"></a>
+<a id="orge9c544a"></a>
 
 # Scheme Interpreter
 
-This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs [wizard book](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
-
-The idea is to implement an environment passing interpreter, with lexical scope. I'm adding the ideas from the book as I go. I'm using an alist representation of environment frames, but it's somewhat arbitrary.
+This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs [(the wizard book)](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
 
 See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
 
 
-<a id="orgb3a2f3a"></a>
+<a id="org0e8b51e"></a>
 
 ## Points of interest
 
 
-<a id="org05a03be"></a>
+<a id="org77f8b3a"></a>
 
 ### Evaluation order in the case of syntax transformations
 
@@ -33,14 +31,14 @@ The interpreter, like Scheme, follows applicative order evaluation. All expressi
     (define mult (lambda (x y) (* x y)))
     (mult (+ 1 2) (* 3 4))
 
-Left to right order is unspecified, but the expressions \`(+ 1 2)\` and \`(\* 3 4)\` should be evaluated before being passed into the \`mult\` procedure:
+Left to right order is unspecified, but the expressions `(+ 1 2)` and `(* 3 4)` should be evaluated before being passed into the `mult` procedure:
 
     (mult (+ 1 2) (* 3 4))
     (mult 3 12)
     (* 3 12)
     36
 
-What about the case of syntax transformations? For example, we transform \`let\` forms into immediately applied anonymous procedures, as such:
+What about the case of syntax transformations? For example, we transform `let` forms into immediately applied anonymous procedures, as such:
 
     (let ([x 5]) (* x x))
     >>> ((lambda (x) (* x x)) 5)
@@ -76,15 +74,15 @@ There is a pleasing separation of concern to performing only syntactic transform
         x)
      (* 5 5))
 
-Then \`(\* 5 5)\` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the \`set-variable!\` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether \`set!\` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
+Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="org03ac405"></a>
+<a id="orgcfa9fb8"></a>
 
 ## Tests
 
 
-<a id="org2d60d0e"></a>
+<a id="orge28bed3"></a>
 
 ### The First Interpreter
 
