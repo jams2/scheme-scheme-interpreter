@@ -24,13 +24,34 @@
 (define-syntax test-case
   (syntax-rules ()
     [(_ desc eq-proc expected expr)
-     (let [(actual expr)]
+     (let ([actual expr])
        (if (eq-proc actual expected)
 	   (display (format "- [x] ~s\n" desc))
-	   (display (format "- [ ] ~s\n\texpected: ~s\n\tgot:      ~s"
+	   (display (format "- [ ] ~s\n\texpected: ~s\n\tgot:      ~s\n"
 			    desc
 			    expected
 			    actual))))]))
+
+(define-syntax test-raises
+  (syntax-rules ()
+    [(_ who irritants expr)
+     (call/cc
+      (lambda (k)
+	(with-exception-handler
+	    (lambda (c)
+	      (if (and (equal? (condition-who c) who)
+		       (equal? (condition-irritants c) irritants))
+		  (begin
+		    (display (format "- [x] ~s raises exception with irritants ~s\n"
+				     who
+				     irritants))
+		    (k #t))
+		  (begin
+		    (display (format "- [ ] unexpected condition!\n\twho: ~s\n\tirr: ~s\n"
+				     (condition-who c)
+				     (condition-irritants c)))
+		    (k #f))))
+	  (lambda () expr))))]))
 
 (run-tests
  [test-case "numbers are self-evaluating"
@@ -44,4 +65,12 @@
  [test-case "variables are looked up in the env"
 	    equal?
 	    5
-	    (evaluate 'x (append '(((x . 5))) (primitive-env)))])
+	    (evaluate 'x (append '(((x . 5))) (primitive-env)))]
+ [test-raises 'set-variable!
+	      '(x)
+	      (evaluate '(set! x 5) (primitive-env))]
+ [test-case "begin forms are evaluated sequentially"
+	    equal?
+	    5
+	    (evaluate '(begin (define x 5) (define y 6) x) (primitive-env))]
+ )

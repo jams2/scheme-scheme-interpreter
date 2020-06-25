@@ -1,28 +1,29 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreter](#orge9c544a)
-    1.  [Points of interest](#org0e8b51e)
-        1.  [Evaluation order in the case of syntax transformations](#org77f8b3a)
-    2.  [Tests](#orgcfa9fb8)
-        1.  [The First Interpreter](#orge28bed3)
+1.  [Scheme Interpreters](#org9852bcd)
+    1.  [Points of interest](#org0fca806)
+        1.  [Evaluation order in the case of syntax transformations](#org976d97d)
+    2.  [Tests](#org4545b37)
+        1.  [Closure Generating Interpreter](#orga8c9e58)
+        2.  [Interpreter I](#orge90de93)
 
 
-<a id="orge9c544a"></a>
+<a id="org9852bcd"></a>
 
-# Scheme Interpreter
+# Scheme Interpreters
 
 This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs [(the wizard book)](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
 
 See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
 
 
-<a id="org0e8b51e"></a>
+<a id="org0fca806"></a>
 
 ## Points of interest
 
 
-<a id="org77f8b3a"></a>
+<a id="org976d97d"></a>
 
 ### Evaluation order in the case of syntax transformations
 
@@ -77,14 +78,30 @@ There is a pleasing separation of concern to performing only syntactic transform
 Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="orgcfa9fb8"></a>
+<a id="org4545b37"></a>
 
 ## Tests
 
 
-<a id="orge28bed3"></a>
+<a id="orga8c9e58"></a>
 
-### The First Interpreter
+### Closure Generating Interpreter
+
+-   "numbers are self-evaluating"
+-   "quoted exprs return the expr"
+-   "variables are looked up in the env"
+-   set-variable! raises exception with irritants (x)
+-   "begin forms are evaluated sequentially"
+
+Ran 5 tests in .000064s:
+
+-   5 PASSED
+-   0 FAILED
+
+
+<a id="orge90de93"></a>
+
+### Interpreter I
 
 -   "numbers are self-evaluating"
 -   "strings are self-evaluating"
