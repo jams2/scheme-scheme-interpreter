@@ -25,7 +25,7 @@
   (syntax-rules ()
     [(_ desc eq-proc expected expr)
      (let ([actual expr])
-       (if (eq-proc actual expected)
+       (if (eq-proc expected actual)
 	   (display (format "- [x] ~s\n" desc))
 	   (display (format "- [ ] ~s\n\texpected: ~s\n\tgot:      ~s\n"
 			    desc
@@ -58,6 +58,14 @@
 	    equal?
 	    1
 	    (evaluate 1 (primitive-env))]
+ [test-case "floating point numbers are self-evaluating"
+	    equal?
+	    3.145
+	    (evaluate 3.145 (primitive-env))]
+ [test-case "numbers with exponents are self-evaluating"
+	    equal?
+	    3e9
+	    (evaluate 3e9 (primitive-env))]
  [test-case "quoted exprs return the expr"
 	    equal?
 	    'x
@@ -73,4 +81,23 @@
 	    equal?
 	    5
 	    (evaluate '(begin (define x 5) (define y 6) x) (primitive-env))]
+ [test-raises 'gen-sequence
+	      '(())
+	      (evaluate '(begin) (primitive-env))]
+ [test-case "lambda expressions evaluate to a 'procedure tagged list"
+	    (lambda (expected actual) (eq? (car actual) expected))
+	    'procedure
+	    (evaluate '(lambda (x) x) (primitive-env))]
+ [test-case "left left identity function is evaluated"
+	    equal?
+	    5
+	    (evaluate '((lambda (x) x) 5) (primitive-env))]
+ [test-case "primitive + is applied"
+	    equal?
+	    7
+	    (evaluate '(+ 3 4) (primitive-env))]
+ [test-case "primitive / is applied"
+	    equal?
+	    (/ 3 7)
+	    (evaluate '(/ 3 7) (primitive-env))]
  )

@@ -321,14 +321,7 @@
   (lambda (vars vals env)
     (if (not (eq? (length vars) (length vals)))
 	(error 'extend-env "Mismatched vars<->vals" vars vals)
-	(cons (cons-frame vars vals) env))))
-
-(define cons-frame
-  (lambda (vars vals)
-    (if (null? vars)
-	'()
-	(cons (cons (car vars) (car vals))
-	      (cons-frame (cdr vars) (cdr vals))))))
+	(cons (map cons vars vals) env))))
 
 (define lookup-variable
   (lambda (var env)
