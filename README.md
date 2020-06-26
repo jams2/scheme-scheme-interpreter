@@ -1,16 +1,16 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreters](#org2e0777e)
-    1.  [Points of interest](#org8ad86a7)
-        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#org8c0b7bf)
-        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org8d9e331)
-    2.  [Tests](#org07fcdd5)
-        1.  [Closure Generating Interpreter](#org644b964)
-        2.  [Interpreter I](#orgbbbcf03)
+1.  [Scheme Interpreters](#orgceb7d75)
+    1.  [Points of interest](#orga413268)
+        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#orgd46e7a1)
+        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org967266e)
+    2.  [Tests](#org56ad4ea)
+        1.  [Closure Generating Interpreter](#org28e0e97)
+        2.  [Interpreter I](#org956a98e)
 
 
-<a id="org2e0777e"></a>
+<a id="orgceb7d75"></a>
 
 # Scheme Interpreters
 
@@ -19,12 +19,12 @@ This repo contains a number of toy Scheme interpreters, written in Chez Scheme. 
 See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
 
 
-<a id="org8ad86a7"></a>
+<a id="orga413268"></a>
 
 ## Points of interest
 
 
-<a id="org8c0b7bf"></a>
+<a id="orgd46e7a1"></a>
 
 ### Comparative execution time of Interpreter I and the Closure Generating Compiler
 
@@ -61,7 +61,7 @@ Without:
 > 732426288 bytes allocated, including 735672288 bytes reclaimed
 
 
-<a id="org8d9e331"></a>
+<a id="org967266e"></a>
 
 ### Evaluation order in the case of syntax transformations (Interpreter I)
 
@@ -116,12 +116,12 @@ There is a pleasing separation of concern to performing only syntactic transform
 Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="org07fcdd5"></a>
+<a id="org56ad4ea"></a>
 
 ## Tests
 
 
-<a id="org644b964"></a>
+<a id="org28e0e97"></a>
 
 ### Closure Generating Interpreter
 
@@ -137,14 +137,20 @@ Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus
 -   "left left identity function is evaluated"
 -   "primitive + is applied"
 -   "primitive / is applied"
+-   "successful if predicate evaluates only the consequent"
+-   "failed if predicate evaluates only the alternative"
+-   "if forms return false if the predicate fails and their is no alt"
+-   "a definition and then call of fibonacci is correctly evaluated"
+-   "let forms are evaluated"
+-   "let forms have lexical scope"
 
-Ran 12 tests in .000092s:
+Ran 18 tests in  .00014s:
 
--   12 PASSED
+-   18 PASSED
 -   0 FAILED
 
 
-<a id="orgbbbcf03"></a>
+<a id="org956a98e"></a>
 
 ### Interpreter I
 
