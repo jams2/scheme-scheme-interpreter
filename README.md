@@ -1,16 +1,16 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreters](#orgd2b2cbf)
-    1.  [Points of interest](#org8b91120)
-        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#org302c75d)
-        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org8a45da0)
-    2.  [Tests](#org55f655b)
-        1.  [Closure Generating Interpreter](#org37a6d18)
-        2.  [Interpreter I](#org2a23c13)
+1.  [Scheme Interpreters](#orgc329676)
+    1.  [Points of interest](#orge74dc6c)
+        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#orgb063805)
+        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#orgc612611)
+    2.  [Tests](#orgb96d965)
+        1.  [Closure Generating Interpreter](#org2d350cc)
+        2.  [Interpreter I](#org932f3d2)
 
 
-<a id="orgd2b2cbf"></a>
+<a id="orgc329676"></a>
 
 # Scheme Interpreters
 
@@ -19,12 +19,12 @@ This repo contains a number of toy Scheme interpreters, written in Chez Scheme. 
 See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
 
 
-<a id="org8b91120"></a>
+<a id="orge74dc6c"></a>
 
 ## Points of interest
 
 
-<a id="org302c75d"></a>
+<a id="orgb063805"></a>
 
 ### Comparative execution time of Interpreter I and the Closure Generating Compiler
 
@@ -43,19 +43,25 @@ Evaluating the following fibonacci computation in both the first interpreter and
 With closures:
 
 > 110 collections
+> 
 > 0.961665920s elapsed cpu time, including 0.003976291s collecting
+> 
 > 0.962282046s elapsed real time, including 0.004115199s collecting
+> 
 > 926305488 bytes allocated, including 930052240 bytes reclaimed
 
 Without:
 
 > 87 collections
+> 
 > 1.130188863s elapsed cpu time, including 0.001864684s collecting
+> 
 > 1.130928856s elapsed real time, including 0.002018562s collecting
+> 
 > 732426288 bytes allocated, including 735672288 bytes reclaimed
 
 
-<a id="org8a45da0"></a>
+<a id="orgc612611"></a>
 
 ### Evaluation order in the case of syntax transformations (Interpreter I)
 
@@ -110,12 +116,12 @@ There is a pleasing separation of concern to performing only syntactic transform
 Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="org55f655b"></a>
+<a id="orgb96d965"></a>
 
 ## Tests
 
 
-<a id="org37a6d18"></a>
+<a id="org2d350cc"></a>
 
 ### Closure Generating Interpreter
 
@@ -138,7 +144,7 @@ Ran 12 tests in .000092s:
 -   0 FAILED
 
 
-<a id="org2a23c13"></a>
+<a id="org932f3d2"></a>
 
 ### Interpreter I
 
