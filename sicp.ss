@@ -2,6 +2,7 @@
 (define setup-env
   (lambda () (list `((false . ,#f)
 		(true . ,#t)
+		(< . ,<)
 		(+ . ,+)
 		(= . ,=)
 		(- . ,-)

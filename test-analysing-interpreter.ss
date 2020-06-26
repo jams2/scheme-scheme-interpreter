@@ -26,11 +26,14 @@
     [(_ desc eq-proc expected expr)
      (let ([actual expr])
        (if (eq-proc expected actual)
-	   (display (format "- [x] ~s\n" desc))
-	   (display (format "- [ ] ~s\n\texpected: ~s\n\tgot:      ~s\n"
-			    desc
-			    expected
-			    actual))))]))
+	   (begin (display (format "- [x] ~s\n" desc))
+		  #t)
+	   (begin
+	     (display (format "- [ ] ~s\n\texpected: ~s\n\tgot:      ~s\n"
+			      desc
+			      expected
+			      actual))
+	     #f)))]))
 
 (define-syntax test-raises
   (syntax-rules ()
@@ -100,4 +103,25 @@
 	    equal?
 	    (/ 3 7)
 	    (evaluate '(/ 3 7) (primitive-env))]
+ [test-case "successful if predicate evaluates only the consequent"
+	    equal?
+	    6
+	    (evaluate '(begin (define x 6)
+			      (if true
+				  x
+				  (begin (set! x 7)
+					 x)))
+		      (primitive-env))]
+ [test-case "failed if predicate evaluates only the alternative"
+	    equal?
+	    6
+	    (evaluate '(begin (define x 6)
+			      (if false
+				  (begin (set! x 7) x)
+				  x))
+		      (primitive-env))]
+ [test-case "if forms return false if the predicate fails and their is no alt"
+	    equal?
+	    #f
+	    (evaluate '(if false true) (primitive-env))]
  )

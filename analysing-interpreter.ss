@@ -1,7 +1,10 @@
 (include "sicp.ss") ;; env operations etc.
 (define primitive-env
   (lambda ()
-    (list `((+ . ,+)
+    (list `((true . ,#t)
+	    (false . ,#f)
+	    (+ . ,+)
+	    (< . ,<)
 	    (- . ,-)
 	    (* . ,*)
 	    (/ . ,/)
@@ -20,6 +23,7 @@
 	  [(match? 'set! expr) (gen-assignment expr)]
 	  [(match? 'begin expr) (gen-sequence (cdr expr))]
 	  [(match? 'lambda expr) (gen-procedure expr)]
+	  [(match? 'if expr) (gen-conditional expr)]
 	  [(application? expr) (gen-application expr)]
 	  [else (error 'analyze "invalid expression" expr)])))
 
@@ -110,3 +114,13 @@
 
 (define proc-env
   (lambda (proc) (cadddr proc)))
+
+(define gen-conditional
+  (lambda (expr)
+    (let ([p-closure (analyze (if-predicate expr))]
+	  [c-closure (analyze (if-consequent expr))]
+	  [a-closure (analyze (if-alternative expr))])
+      (lambda (env)
+	(if (true? (p-closure env))
+	    (c-closure env)
+	    (a-closure env))))))
