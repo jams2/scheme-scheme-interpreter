@@ -3,12 +3,12 @@
   (lambda ()
     (list `((true . ,#t)
 	    (false . ,#f)
-	    (+ . ,+)
-	    (< . ,<)
-	    (- . ,-)
-	    (* . ,*)
-	    (/ . ,/)
-	    (= . ,=)))))
+	    (+ . (primitive . ,+))
+	    (< . (primitive . ,<))
+	    (- . (primitive . ,-))
+	    (* . (primitive . ,*))
+	    (/ . (primitive . ,/))
+	    (= . (primitive . ,=))))))
 
 (define evaluate
   (lambda (expr env)
@@ -24,6 +24,7 @@
 	  [(match? 'begin expr) (gen-sequence (cdr expr))]
 	  [(match? 'lambda expr) (gen-procedure expr)]
 	  [(match? 'if expr) (gen-conditional expr)]
+	  [(match? 'let expr) (gen-let expr)]
 	  [(application? expr) (gen-application expr)]
 	  [else (error 'analyze "invalid expression" expr)])))
 
@@ -99,12 +100,17 @@
 
 (define execute-proc
   (lambda (rator rands)
-    (if (compound-procedure? rator)
-	((proc-body rator)
-	 (extend-env (proc-params rator)
-		     rands
-		     (proc-env rator)))
-	(scheme-apply rator rands))))
+    (cond [(compound-procedure? rator)
+	   ((proc-body rator) (extend-env (proc-params rator)
+					  rands
+					  (proc-env rator)))]
+	  [(primitive-procedure? rator) (scheme-apply (primitive-proc rator) rands)]
+	  [else (error 'execute-proc "Invalid procedure operator" rator)])))
+
+(define primitive-procedure?
+  (lambda (rator) (eq? (car rator) 'primitive)))
+
+(define primitive-proc (lambda (rator) (cdr rator)))
 
 (define proc-params
   (lambda (proc) (cadr proc)))
@@ -124,3 +130,13 @@
 	(if (true? (p-closure env))
 	    (c-closure env)
 	    (a-closure env))))))
+
+(define gen-let
+  (lambda (expr)
+    (let ([params (map car (let-bindings expr))]
+	  [args (map cadr (let-bindings expr))])
+      (analyze
+       `((lambda ,params
+	   ,@(let-body expr))
+	 ,@args)))))
+
