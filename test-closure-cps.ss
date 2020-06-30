@@ -32,4 +32,15 @@
 				  5
 				  6)
 			     (primitive-env))]
+ [test-case-equal? "let expressions are evaluated"
+		   5
+		   (evaluate '(let ([x 5]) x) (primitive-env))]
+ [test-case-equal? "primitive applications are evaluated"
+		   5
+		   (evaluate '(+ 1 2 2) (primitive-env))]
+ [test-case-equal? "primitive ops with single arg are evaluated"
+		   -1
+		   (evaluate '(- 1) (primitive-env))]
  )
+
+(include "test-analysing-interpreter.ss")

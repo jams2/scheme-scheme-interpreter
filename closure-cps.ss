@@ -39,49 +39,38 @@
 (define gen-definition
   (lambda (expr)
     (let ([var (cadr expr)]
-	  [val (analyze (caddr expr))])
+	  [val-closure (analyze (caddr expr))])
       (lambda (env k)
-	(val env (lambda (val)
-		   (k (define-variable! var val env))))))))
+	(val-closure env
+		     (lambda (val)
+		       (k (define-variable! var val env))))))))
 
 (define gen-assignment
   (lambda (expr)
     (let ([var (cadr expr)]
 	  [val (analyze (caddr expr))])
       (lambda (env k)
-	(val env (lambda (val)
-		   (k (set-variable! var val env))))))))
-
-(define define-variable!
-  (lambda (var val env)
-    (let* ([first-frame (car env)]
-	   [existing (assoc var first-frame)])
-      (if existing
-	  (set-cdr! existing val)
-	  (set-car! env (cons `(,var . ,val) first-frame))))))
+	(val env
+	     (lambda (val)
+	       (k (set-variable! var val env))))))))
 
 (define gen-sequence
   (lambda (actions)
-    (define sequentially
-      (lambda (proc1 proc2)
+    (define nest-closures
+      (lambda (c1 c2)
 	(lambda (env k)
-	  (proc1 env (lambda (val)
-		       (proc2 env k))))))
-    (define loop
-      (lambda (first-proc rest)
+	  (c1 env (lambda (val)
+		    (c2 env k))))))
+    (define loop-closures
+      (lambda (first-closure rest)
 	(if (null? rest)
-	    first-proc
-	    (loop (sequentially first-proc (car rest))
-		  (cdr rest)))))
-    (let ([procs (map analyze actions)])
-      (if (null? procs)
+	    first-closure
+	    (loop-closures (nest-closures first-closure (car rest))
+			   (cdr rest)))))
+    (let ([closures (map analyze actions)])
+      (if (null? closures)
 	  (error 'gen-sequence "empty sequence" actions))
-      (loop (car procs) (cdr procs)))))
-
-;; a sequence of the form (begin (+ 1 2) (+ 3 4)) can be transformed to nested application of lambdas, as we only care to return the result of the final computation.
-;; (begin (+ 1 2) (+ 3 4)) \equiv ((lambda (x) (+ 3 4)) (+ 1 2))
-;; (begin (+ 1 2) (+ 3 4) (+ 5 6)) ((lambda (x) ((lambda (x) (+ 5 6)) (+ 3 4))) (+ 1 2))
-;; see Reynolds
+      (loop-closures (car closures) (cdr closures)))))
 
 (define gen-procedure
   (lambda (expr)
@@ -99,3 +88,42 @@
 			 (if (true? val)
 			     (c-closure env k)
 			     (a-closure env k))))))))
+
+(define gen-application
+  (lambda (expr)
+    (let ([rator-closure (analyze (car expr))]
+	  [rand-closures (map analyze (cdr expr))])
+      (lambda (env k)
+	(rator-closure env
+		       (rator-cont env rand-closures k))))))
+
+(define rator-cont
+  (lambda (env rand-closures k)
+    (lambda (rator)
+      (eval-closure-list rand-closures
+			 env
+			 (lambda (rands)
+			   (execute-proc rator
+					 rands
+					 k))))))
+
+(define eval-closure-list
+  (lambda (l env k)
+    (if (null? l)
+	(k l)
+	(let ([closure (car l)])
+	  (closure env
+		   (lambda (val)
+		     (eval-closure-list (cdr l)
+					env
+					(lambda (next) (k (cons val next))))))))))
+
+(define execute-proc
+  (lambda (rator rands k)
+    (cond [(compound-procedure? rator)
+	   ((proc-body rator) (extend-env (proc-params rator)
+					  rands
+					  (proc-env rator))
+	    k)]
+	  [(primitive-procedure? rator) (k (scheme-apply (primitive-proc rator) rands))]
+	  [else (error 'execute-proc "Invalid procedure operator" rator)])))
