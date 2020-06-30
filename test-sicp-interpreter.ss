@@ -1,4 +1,4 @@
-(include "./sicp.ss")
+(include "sicp.ss")
 
 (define-syntax run-tests
   (syntax-rules ()

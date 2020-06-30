@@ -47,7 +47,7 @@
   (lambda (rator rands env)
     (if (compound-procedure? rator)
 	(eval-sequence (proc-body rator)
-		       (extend-env (proc-args rator)
+		       (extend-env (proc-params rator)
 				   rands
 				   (proc-env rator)))
 	(scheme-apply rator rands))))
@@ -251,7 +251,7 @@
   (lambda (args body env)
     (list 'procedure args (internal-definitions->let body) env)))
 
-(define proc-args
+(define proc-params
   (lambda (p) (cadr p)))
 
 (define proc-body
