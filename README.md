@@ -1,30 +1,39 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreters](#orgceb7d75)
-    1.  [Points of interest](#orga413268)
-        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#orgd46e7a1)
-        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org967266e)
-    2.  [Tests](#org56ad4ea)
-        1.  [Closure Generating Interpreter](#org28e0e97)
-        2.  [Interpreter I](#org956a98e)
+1.  [Scheme Interpreters](#org20070cd)
+    1.  [Sources and Related Reading](#org762c818)
+    2.  [Points of interest](#org7648fd2)
+        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#org2299bb3)
+        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org2d8e02b)
+    3.  [Tests](#org8e64de0)
+        1.  [Closure Generating Interpreter](#org60d9dba)
+        2.  [Interpreter I](#orgae4f897)
 
 
-<a id="orgceb7d75"></a>
+<a id="org20070cd"></a>
 
 # Scheme Interpreters
 
-This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of the Structure and Interpretation of Computer Programs [(the wizard book)](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. There's also an example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
-
-See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
+This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of Structure and Interpretation of Computer Programs [(the wizard book)](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. 
 
 
-<a id="orga413268"></a>
+<a id="org762c818"></a>
+
+## Sources and Related Reading
+
+-   There's a metacircular evaluator example in [The Scheme Programming Language](https://www.scheme.com/tspl4/examples.html#./examples:h7), by Kent Dybvig.
+-   See [Feeley and Lapalme '87](http://www.iro.umontreal.ca/~feeley/papers/FeeleyLapalmeCL87.pdf) for more on the closure generating interpreter ([4.1.7](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book-Z-H-26.html#%_sec_4.1.7) in SICP).
+-   Reynolds elucidates (among other things) the Continuation Passing Style transformation of [his 1972 paper](https://surface.syr.edu/cgi/viewcontent.cgi?article=1012&context=lcsmith_other).
+-   [Essentials of Programming Languages, 3e](http://eopl3.com/) (Friedman and Wand)
+
+
+<a id="org7648fd2"></a>
 
 ## Points of interest
 
 
-<a id="orgd46e7a1"></a>
+<a id="org2299bb3"></a>
 
 ### Comparative execution time of Interpreter I and the Closure Generating Compiler
 
@@ -60,8 +69,20 @@ Without:
 > 
 > 732426288 bytes allocated, including 735672288 bytes reclaimed
 
+The continuation passing interpreter exhibits the following performance:
 
-<a id="org967266e"></a>
+> 110 collections
+> 
+> 0.945723199s elapsed cpu time, including 0.007629898s collecting
+> 
+> 0.946283862s elapsed real time, including 0.007782428s collecting
+> 
+> 926306416 bytes allocated, including 942068448 bytes reclaimed
+
+TODO: write some proper benchmarks.
+
+
+<a id="org2d8e02b"></a>
 
 ### Evaluation order in the case of syntax transformations (Interpreter I)
 
@@ -116,12 +137,12 @@ There is a pleasing separation of concern to performing only syntactic transform
 Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="org56ad4ea"></a>
+<a id="org8e64de0"></a>
 
 ## Tests
 
 
-<a id="org28e0e97"></a>
+<a id="org60d9dba"></a>
 
 ### Closure Generating Interpreter
 
@@ -150,7 +171,7 @@ Ran 18 tests in  .00014s:
 -   0 FAILED
 
 
-<a id="org956a98e"></a>
+<a id="orgae4f897"></a>
 
 ### Interpreter I
 

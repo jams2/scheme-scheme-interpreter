@@ -44,3 +44,13 @@
  )
 
 (include "test-analysing-interpreter.ss")
+
+(time (evaluate '((lambda (i)
+		    ((lambda (y) ((y y) i))
+		     (lambda (f)
+		       (lambda (n)
+			 (if (< n 2) n
+			     (+ ((f f) (- n 1))
+				((f f) (- n 2))))))))
+		  30)
+		(primitive-env)))
