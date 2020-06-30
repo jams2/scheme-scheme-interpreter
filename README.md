@@ -1,24 +1,24 @@
 
 # Table of Contents
 
-1.  [Scheme Interpreters](#org20070cd)
-    1.  [Sources and Related Reading](#org762c818)
-    2.  [Points of interest](#org7648fd2)
-        1.  [Comparative execution time of Interpreter I and the Closure Generating Compiler](#org2299bb3)
-        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org2d8e02b)
-    3.  [Tests](#org8e64de0)
-        1.  [Closure Generating Interpreter](#org60d9dba)
-        2.  [Interpreter I](#orgae4f897)
+1.  [Scheme Interpreters](#org25496df)
+    1.  [Sources and Related Reading](#org416d9a7)
+    2.  [Points of interest](#orgfd90f6b)
+        1.  [Comparative execution time of interpreter variations](#orgfa60aac)
+        2.  [Evaluation order in the case of syntax transformations (Interpreter I)](#org8e2a1b2)
+    3.  [Tests](#org9d1090e)
+        1.  [Closure Generating Interpreter](#orgf8136db)
+        2.  [Interpreter I](#org7498864)
 
 
-<a id="org20070cd"></a>
+<a id="org25496df"></a>
 
 # Scheme Interpreters
 
 This repo contains a number of toy Scheme interpreters, written in Chez Scheme. It is an exercise of ideas from chapter 4 of Structure and Interpretation of Computer Programs [(the wizard book)](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html), and [William Byrd](https://www.youtube.com/channel/UCSC9kYeTee012BRsYw-y12Q)'s hangout series on youtube. 
 
 
-<a id="org762c818"></a>
+<a id="org416d9a7"></a>
 
 ## Sources and Related Reading
 
@@ -28,16 +28,16 @@ This repo contains a number of toy Scheme interpreters, written in Chez Scheme. 
 -   [Essentials of Programming Languages, 3e](http://eopl3.com/) (Friedman and Wand)
 
 
-<a id="org7648fd2"></a>
+<a id="orgfd90f6b"></a>
 
 ## Points of interest
 
 
-<a id="org2299bb3"></a>
+<a id="orgfa60aac"></a>
 
-### Comparative execution time of Interpreter I and the Closure Generating Compiler
+### Comparative execution time of interpreter variations
 
-Evaluating the following fibonacci computation in both the first interpreter and the closure generating interpreter shows that the closure generating interpreter is indeed (by a rough measure) quicker than its counterpart; however it makes use of more memory.
+Evaluating the following fibonacci computation in both the first interpreter and the closure generating interpreter shows that the closure generating interpreter is indeed (by a rough measure) quicker than its counterpart; however, it makes use of more memory.
 
     (time (evaluate '((lambda (i)
     		    ((lambda (y) ((y y) i))
@@ -69,7 +69,7 @@ Without:
 > 
 > 732426288 bytes allocated, including 735672288 bytes reclaimed
 
-The continuation passing interpreter exhibits the following performance:
+The continuation passing interpreter (which also makes use of functional closures) exhibits the following performance (quickest overall execution, more time in garbage collection and slightly more memory use than the previous closure generating interpreter):
 
 > 110 collections
 > 
@@ -82,7 +82,7 @@ The continuation passing interpreter exhibits the following performance:
 TODO: write some proper benchmarks.
 
 
-<a id="org2d8e02b"></a>
+<a id="org8e2a1b2"></a>
 
 ### Evaluation order in the case of syntax transformations (Interpreter I)
 
@@ -137,12 +137,12 @@ There is a pleasing separation of concern to performing only syntactic transform
 Then `(* 5 5)` is evaluated to 25 and associated with x in the inner frame. Thus, not evaluating the values of let bindings at the time of transformation does not produce behaviour that would violate lexical scope, and is consistent with the programmer's expectations. Amusingly, examining this unearthed a bug in the `set-variable!` procedure, in which only the current frame was examined when looking for the variable to mutate. (It is worth considering whether `set!` should operate only in the local scope or traverse frames until a matching variable name is found. Presently I think the latter.)
 
 
-<a id="org8e64de0"></a>
+<a id="org9d1090e"></a>
 
 ## Tests
 
 
-<a id="org60d9dba"></a>
+<a id="orgf8136db"></a>
 
 ### Closure Generating Interpreter
 
@@ -171,7 +171,7 @@ Ran 18 tests in  .00014s:
 -   0 FAILED
 
 
-<a id="orgae4f897"></a>
+<a id="org7498864"></a>
 
 ### Interpreter I
 
